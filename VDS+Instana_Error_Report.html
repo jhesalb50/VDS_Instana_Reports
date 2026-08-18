@@ -1,0 +1,2808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" >
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" >
+  <title>Instana VDS Analytics Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" >
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" >
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #07090f;
+      --bg2:       #0c1020;
+      --bg3:       #111827;
+      --bg4:       #18243a;
+      --bg5:       #1e2d45;
+      --border:    rgba(255,255,255,0.07);
+      --borderA:   rgba(99,102,241,0.45);
+      --accent:    #6366f1;
+      --accentL:   #818cf8;
+      --accentG:   rgba(99,102,241,0.18);
+      --green:     #10b981;
+      --greenG:    rgba(16,185,129,0.12);
+      --red:       #ef4444;
+      --redG:      rgba(239,68,68,0.1);
+      --yellow:    #f59e0b;
+      --text:      #f1f5f9;
+      --text2:     #94a3b8;
+      --text3:     #64748b;
+      --r:         12px;
+      --r2:        8px;
+      --mono:      'JetBrains Mono', monospace;
+      --sans:      'Inter', sans-serif;
+    }
+
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+      background-image:
+        radial-gradient(ellipse 80% 40% at 20% 0%, rgba(99,102,241,0.07) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 30% at 80% 100%, rgba(16,185,129,0.04) 0%, transparent 60%);
+    }
+
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: #2d3748; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #4a5568; }
+
+    /* ── NAVBAR ── */
+    .navbar {
+      position: sticky; top: 0; z-index: 200;
+      height: 62px;
+      padding: 0 24px;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      background: rgba(7,9,15,0.88);
+      backdrop-filter: blur(24px) saturate(180%);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand {
+      display: flex; align-items: center; gap: 11px; text-decoration: none; flex-shrink: 0;
+    }
+    .brand-logo {
+      width: 34px; height: 34px; border-radius: 9px;
+      background: linear-gradient(135deg,var(--accent) 0%,#a78bfa 100%);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; color: #fff;
+      box-shadow: 0 0 18px var(--accentG);
+    }
+    .brand-info { line-height: 1.25; }
+    .brand-name { font-size: 14px; font-weight: 700; letter-spacing: -.02em; color: var(--text); }
+    .brand-tag  { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text3); }
+
+    .nav-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+    /* ── INPUTS ── */
+    select, input {
+      font-family: var(--sans);
+      background: var(--bg4);
+      border: 1px solid var(--border);
+      border-radius: var(--r2);
+      color: var(--text);
+      font-size: 13px;
+      padding: 7px 12px;
+      outline: none;
+      appearance: none;
+      transition: border-color .2s;
+      cursor: pointer;
+    }
+    select:focus, input:focus { border-color: var(--borderA); }
+    input { cursor: text; }
+
+    .sel-wrap { position: relative; }
+    .sel-wrap select { padding-right: 28px; }
+    .sel-arrow { position: absolute; right: 9px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 10px; pointer-events: none; }
+
+    /* ── BUTTONS ── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--sans); font-size: 13px; font-weight: 600;
+      padding: 7px 15px; border-radius: var(--r2);
+      border: none; cursor: pointer; white-space: nowrap;
+      transition: all .18s; text-decoration: none;
+    }
+    .btn-primary {
+      background: var(--accent); color: #fff;
+      box-shadow: 0 0 16px var(--accentG);
+    }
+    .btn-primary:hover { background: #5254e0; transform: translateY(-1px); box-shadow: 0 0 26px rgba(99,102,241,.4); }
+    .btn-primary:active { transform: none; }
+    .btn-primary:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+
+    .btn-ghost {
+      background: transparent; color: var(--text2);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { background: var(--bg5); color: var(--text); border-color: var(--borderA); }
+    .btn-ghost:disabled { opacity: .4; cursor: not-allowed; }
+
+    .btn-sm { font-size: 12px; padding: 5px 11px; }
+    .btn-xs { font-size: 11px; padding: 4px 9px; }
+
+    /* ── MAIN ── */
+    .main { max-width: 1380px; margin: 0 auto; padding: 24px 20px 40px; }
+
+    /* ── ALERT ── */
+    .alert {
+      display: flex; align-items: flex-start; gap: 11px;
+      padding: 13px 16px;
+      border-radius: var(--r2);
+      font-size: 12.5px; line-height: 1.65;
+      margin-bottom: 20px;
+    }
+    .alert-warn {
+      background: rgba(245,158,11,.07);
+      border: 1px solid rgba(245,158,11,.25);
+      color: #fbbf24;
+    }
+    .alert-close {
+      margin-left: auto; background: none; border: none;
+      color: inherit; cursor: pointer; opacity: .55; font-size: 13px; padding: 0; flex-shrink: 0;
+    }
+    .alert-close:hover { opacity: 1; }
+
+    /* ── SETTINGS PANEL ── */
+    .settings {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 18px 22px;
+      margin-bottom: 22px;
+      display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end;
+    }
+    .field { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 140px; }
+    .field-wide { min-width: 240px; flex: 2; }
+    .flabel {
+      font-size: 10.5px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .06em;
+      color: var(--text3);
+    }
+    .finput {
+      background: var(--bg4);
+      border: 1px solid var(--border);
+      border-radius: var(--r2);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 12px;
+      padding: 8px 12px;
+      outline: none;
+      width: 100%;
+      transition: border-color .2s;
+    }
+    .finput:focus { border-color: var(--borderA); }
+    .fselect {
+      background: var(--bg4);
+      border: 1px solid var(--border);
+      border-radius: var(--r2);
+      color: var(--text);
+      font-size: 13px;
+      padding: 8px 12px;
+      outline: none;
+      width: 100%;
+      appearance: none;
+      cursor: pointer;
+      transition: border-color .2s;
+    }
+    .fselect:focus { border-color: var(--borderA); }
+
+    /* ── GRID ── */
+    .grid { display: grid; gap: 20px; }
+
+    /* ── CARD ── */
+    .card {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      overflow: hidden;
+      transition: border-color .25s, box-shadow .25s;
+    }
+    .card.running  { border-color: var(--borderA); box-shadow: 0 0 0 1px var(--accentG); }
+    .card.done     { border-color: rgba(16,185,129,.22); }
+    .card.errored  { border-color: rgba(239,68,68,.28); }
+
+    /* ── CARD HEADER ── */
+    .card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap; gap: 10px;
+    }
+    .ch-left  { display: flex; align-items: center; gap: 12px; }
+    .ch-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+    .card-icon {
+      width: 34px; height: 34px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0;
+    }
+    .ci-plat  { background: rgba(99,102,241,.13); color: #818cf8; }
+    .ci-page  { background: rgba(16,185,129,.11); color: #34d399; }
+    .ci-err   { background: rgba(239,68,68,.11);  color: #f87171; }
+    .ci-type  { background: rgba(245,158,11,.11); color: #fbbf24; }
+
+    .card-title { font-size: 14px; font-weight: 700; color: var(--text); }
+    .card-sub   { font-size: 11px; color: var(--text3); font-family: var(--mono); margin-top: 2px; }
+
+    /* ── STATUS BADGE ── */
+    .badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 11px; font-weight: 600;
+      padding: 3px 9px; border-radius: 20px; border: 1px solid;
+    }
+    .b-idle    { background: rgba(100,116,139,.08); border-color: rgba(100,116,139,.25); color: var(--text3); }
+    .b-running { background: rgba(99,102,241,.1);   border-color: rgba(99,102,241,.3);   color: var(--accentL); }
+    .b-done    { background: rgba(16,185,129,.1);   border-color: rgba(16,185,129,.25);  color: #34d399; }
+    .b-error   { background: rgba(239,68,68,.1);    border-color: rgba(239,68,68,.25);   color: #f87171; }
+
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .dot.blink { animation: blink 1s infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+
+    /* ── CARD BODY ── */
+    .card-body { padding: 14px 20px 18px; }
+
+    /* ── TOOLBAR ── */
+    .toolbar {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 10px; margin-bottom: 12px; flex-wrap: wrap;
+    }
+    .search-wrap { position: relative; flex: 1; min-width: 160px; max-width: 300px; }
+    .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 12px; pointer-events: none; }
+    .search-input {
+      width: 100%; padding: 6px 10px 6px 30px;
+      background: var(--bg4); border: 1px solid var(--border);
+      border-radius: var(--r2); color: var(--text); font-size: 13px;
+      font-family: var(--sans); outline: none; transition: border-color .2s;
+    }
+    .search-input:focus { border-color: var(--borderA); }
+    .search-input::placeholder { color: var(--text3); }
+
+    .toolbar-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .row-count { font-size: 11px; font-family: var(--mono); color: var(--text3); }
+    .exports   { display: flex; gap: 5px; }
+
+    /* ── TABLE ── */
+    .tbl-wrap {
+      overflow-x: auto;
+      border-radius: var(--r2);
+      border: 1px solid var(--border);
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead th {
+      background: rgba(255,255,255,0.025);
+      padding: 9px 13px;
+      text-align: left;
+      font-size: 10.5px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .06em;
+      color: var(--text3);
+      border-bottom: 1px solid var(--border);
+      cursor: pointer; user-select: none; white-space: nowrap;
+      transition: color .15s;
+    }
+    thead th:hover { color: var(--text); }
+    thead th.th-sorted { color: var(--accentL); }
+    .th-arrow { margin-left: 4px; font-size: 9px; opacity: .5; }
+    th.th-sorted .th-arrow { opacity: 1; }
+
+    tbody tr {
+      border-bottom: 1px solid rgba(255,255,255,.04);
+      transition: background .1s;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--bg5); }
+    td { padding: 10px 13px; color: var(--text2); vertical-align: middle; }
+    td:first-child { color: var(--text); font-weight: 500; max-width: 380px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .td-count {
+      font-family: var(--mono); font-weight: 600; color: var(--accentL) !important;
+    }
+    .bar-cell { display: flex; align-items: center; gap: 9px; }
+    .bar {
+      height: 3px; border-radius: 2px; flex-shrink: 0;
+      background: linear-gradient(90deg, var(--accent), #a78bfa);
+      transition: width .4s ease;
+    }
+    .td-date { font-family: var(--mono); font-size: 11.5px; color: var(--text3) !important; }
+
+    /* ── EMPTY / SKELETON / ERROR ── */
+    .empty-state {
+      padding: 44px 20px; text-align: center;
+    }
+    .empty-icon { font-size: 28px; opacity: .3; margin-bottom: 10px; }
+    .empty-title { font-size: 13.5px; font-weight: 600; color: var(--text2); margin-bottom: 5px; }
+    .empty-sub   { font-size: 12.5px; color: var(--text3); }
+
+    .skel-row {
+      display: flex; gap: 10px;
+      padding: 11px 13px;
+      border-bottom: 1px solid var(--border);
+    }
+    .skel {
+      height: 13px; border-radius: 4px;
+      background: linear-gradient(90deg, var(--bg4) 25%, var(--bg5) 50%, var(--bg4) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+    }
+    @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+    .err-box {
+      margin: 14px 20px;
+      background: rgba(239,68,68,.06);
+      border: 1px solid rgba(239,68,68,.2);
+      border-radius: var(--r2);
+      padding: 12px 16px;
+      font-size: 12.5px; color: #f87171;
+      display: flex; gap: 9px; align-items: flex-start;
+    }
+    .err-box i { flex-shrink: 0; margin-top: 1px; }
+
+    /* ── TIMESHIFT COMPARISON ── */
+    .ts-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .ts-stat {
+      background: var(--bg4);
+      border: 1px solid var(--border);
+      border-radius: var(--r2);
+      padding: 14px 16px;
+      text-align: center;
+    }
+    .ts-stat-val {
+      font-size: 22px;
+      font-weight: 800;
+      font-family: var(--mono);
+      line-height: 1.2;
+    }
+    .ts-stat-label {
+      font-size: 10.5px;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: var(--text3);
+      margin-top: 4px;
+      font-weight: 600;
+    }
+    .ts-up   { color: #f87171; }
+    .ts-down { color: #34d399; }
+    .ts-new  { color: #fbbf24; }
+    .ts-gone { color: #94a3b8; }
+    .ts-same { color: var(--text2); }
+
+    .ts-legend {
+      display: flex; flex-wrap: wrap; gap: 14px;
+      margin-bottom: 14px;
+      font-size: 11px; color: var(--text3);
+    }
+    .ts-legend-item { display: flex; align-items: center; gap: 5px; }
+    .ts-legend-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+    }
+
+    .ts-delta {
+      display: inline-flex; align-items: center; gap: 3px;
+      font-family: var(--mono); font-size: 12px; font-weight: 600;
+      padding: 2px 7px; border-radius: 4px;
+    }
+    .ts-delta.up   { background: rgba(239,68,68,.1); color: #f87171; }
+    .ts-delta.down { background: rgba(16,185,129,.1); color: #34d399; }
+    .ts-delta.new  { background: rgba(245,158,11,.1); color: #fbbf24; }
+    .ts-delta.gone { background: rgba(148,163,184,.1); color: #94a3b8; }
+    .ts-delta.same { background: rgba(148,163,184,.06); color: var(--text3); }
+
+    .ts-bar-wrap {
+      display: flex; align-items: center; gap: 6px;
+      height: 18px;
+    }
+    .ts-bar {
+      height: 4px; border-radius: 2px;
+      transition: width .4s ease;
+    }
+    .ts-bar.current { background: linear-gradient(90deg, var(--accent), #a78bfa); }
+    .ts-bar.previous { background: rgba(148,163,184,.3); }
+
+    /* ── DRILLDOWN ── */
+    tbody tr.drillable { cursor: pointer; }
+    tbody tr.drillable:hover td:first-child { color: var(--accentL); }
+    tbody tr.drillable td:first-child::before {
+      content: '';
+      display: inline-block;
+      width: 0; height: 0;
+      margin-right: 8px;
+      border-left: 5px solid var(--text3);
+      border-top: 4px solid transparent;
+      border-bottom: 4px solid transparent;
+      transition: transform .2s;
+      vertical-align: middle;
+    }
+    tbody tr.drillable.expanded td:first-child::before {
+      transform: rotate(90deg);
+      border-left-color: var(--accentL);
+    }
+    tr.drill-row { background: var(--bg2) !important; }
+    tr.drill-row:hover { background: var(--bg2) !important; }
+    tr.drill-row td { padding: 0 !important; border-bottom: 1px solid var(--border) !important; }
+    .drill-container {
+      padding: 12px 16px 14px 32px;
+      animation: fadeUp .2s ease forwards;
+    }
+    .drill-header {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 10px;
+      font-size: 11px; color: var(--text3);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+    .drill-header i { color: var(--accentL); font-size: 10px; }
+    .drill-breadcrumb {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: var(--bg4);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 3px 8px;
+      font-size: 11px;
+      color: var(--text2);
+      font-family: var(--mono);
+      font-weight: 400;
+      text-transform: none;
+      letter-spacing: 0;
+      max-width: 320px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .drill-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .drill-table thead th {
+      background: rgba(255,255,255,0.03);
+      padding: 7px 11px;
+      font-size: 10px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .05em;
+      color: var(--text3);
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      cursor: default;
+    }
+    .drill-table tbody tr {
+      border-bottom: 1px solid rgba(255,255,255,.03);
+    }
+    .drill-table tbody tr:last-child { border-bottom: none; }
+    .drill-table tbody tr:hover { background: rgba(99,102,241,.04); }
+    .drill-table td {
+      padding: 7px 11px;
+      color: var(--text2);
+      vertical-align: middle;
+    }
+    .drill-table td:first-child { color: var(--text); font-weight: 500; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .drill-loading {
+      display: flex; align-items: center; gap: 8px;
+      padding: 14px 0;
+      font-size: 12px; color: var(--text3);
+    }
+    .drill-error {
+      padding: 10px 12px;
+      background: rgba(239,68,68,.06);
+      border: 1px solid rgba(239,68,68,.18);
+      border-radius: 6px;
+      font-size: 12px; color: #f87171;
+    }
+    .drill-empty {
+      padding: 14px 0;
+      font-size: 12px; color: var(--text3);
+      font-style: italic;
+    }
+
+    /* ── BEACON PAYLOAD CARDS ── */
+    .beacon-list { display: flex; flex-direction: column; gap: 8px; }
+    .beacon-card {
+      background: var(--bg4);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 14px;
+      transition: border-color .2s;
+      animation: fadeUp .2s ease forwards;
+      opacity: 0;
+    }
+    .beacon-card:hover { border-color: rgba(99,102,241,.3); }
+    .beacon-meta {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px;
+      margin-bottom: 8px;
+    }
+    .beacon-time {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--accentL);
+      font-weight: 600;
+    }
+    .beacon-tag {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 10.5px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.06);
+      border-radius: 4px;
+      padding: 2px 7px;
+      color: var(--text3);
+      font-family: var(--mono);
+    }
+    .beacon-tag i { font-size: 9px; opacity: .6; }
+    .beacon-url {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text2);
+      word-break: break-all;
+      padding: 6px 8px;
+      background: rgba(0,0,0,.2);
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
+    .beacon-payload {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text2);
+      background: rgba(0,0,0,.3);
+      border: 1px solid rgba(255,255,255,.04);
+      border-radius: 4px;
+      padding: 10px 12px;
+      max-height: 200px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      line-height: 1.55;
+    }
+    .beacon-payload .bp-key { color: #818cf8; }
+    .beacon-payload .bp-val { color: #34d399; }
+    .beacon-payload .bp-str { color: #fbbf24; }
+    .beacon-count-label {
+      font-size: 11px; color: var(--text3);
+      margin-bottom: 8px;
+      font-family: var(--mono);
+    }
+    .beacon-summary-bar {
+      display: flex; flex-wrap: wrap; gap: 6px 16px;
+      padding: 12px 14px;
+      background: var(--bg4);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      margin-bottom: 12px;
+    }
+    .bsb-item { text-align: center; min-width: 60px; }
+    .bsb-val {
+      font-size: 15px; font-weight: 800;
+      font-family: var(--mono); line-height: 1.3;
+      color: var(--text);
+    }
+    .bsb-lbl {
+      display: block; font-size: 9.5px;
+      text-transform: uppercase; letter-spacing: .04em;
+      color: var(--text3); font-weight: 600; margin-top: 1px;
+    }
+    .beacon-card.bc-page { border-left: 3px solid rgba(16,185,129,.5); }
+    .beacon-card.bc-xhr { border-left: 3px solid rgba(245,158,11,.5); }
+    .beacon-card.bc-error { border-left: 3px solid rgba(239,68,68,.5); }
+    .beacon-card.bc-resource { border-left: 3px solid rgba(148,163,184,.25); }
+    .beacon-card.bc-custom { border-left: 3px solid rgba(99,102,241,.4); }
+
+    /* ── SESSION BROWSER ── */
+    .session-search-bar {
+      display: flex; gap: 10px; align-items: center;
+      margin-bottom: 16px; flex-wrap: wrap;
+    }
+    .session-input-wrap {
+      position: relative; flex: 1; min-width: 240px;
+    }
+    .session-input-icon {
+      position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+      color: var(--text3); font-size: 13px; pointer-events: none;
+    }
+    .session-input {
+      width: 100%;
+      padding: 10px 14px 10px 36px;
+      background: var(--bg4);
+      border: 1px solid var(--border);
+      border-radius: var(--r2);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 13px;
+      outline: none;
+      transition: border-color .2s;
+    }
+    .session-input:focus { border-color: var(--borderA); }
+    .session-input::placeholder { color: var(--text3); font-family: var(--sans); }
+
+    .session-timeline {
+      position: relative;
+      padding-left: 28px;
+    }
+    .session-timeline::before {
+      content: '';
+      position: absolute;
+      left: 10px; top: 0; bottom: 0;
+      width: 2px;
+      background: linear-gradient(180deg, var(--accent), rgba(99,102,241,.15));
+      border-radius: 2px;
+    }
+    .session-event {
+      position: relative;
+      margin-bottom: 12px;
+      padding: 12px 14px;
+      background: var(--bg4);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      transition: border-color .2s;
+      animation: fadeUp .2s ease forwards;
+      opacity: 0;
+    }
+    .session-event:hover { border-color: rgba(99,102,241,.25); }
+    .session-event::before {
+      content: '';
+      position: absolute;
+      left: -22px; top: 16px;
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 2px solid var(--bg3);
+      box-shadow: 0 0 6px var(--accentG);
+    }
+    .session-event.ev-error::before { background: var(--red); box-shadow: 0 0 6px rgba(239,68,68,.3); }
+    .session-event.ev-page::before { background: var(--green); box-shadow: 0 0 6px rgba(16,185,129,.3); }
+    .session-event.ev-xhr::before { background: #f59e0b; box-shadow: 0 0 6px rgba(245,158,11,.3); }
+
+    .ev-header {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 6px; flex-wrap: wrap;
+    }
+    .ev-time {
+      font-family: var(--mono); font-size: 11px;
+      color: var(--accentL); font-weight: 600;
+    }
+    .ev-type-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .04em;
+      padding: 2px 7px; border-radius: 4px;
+    }
+    .ev-type-badge.t-error { background: rgba(239,68,68,.12); color: #f87171; }
+    .ev-type-badge.t-page  { background: rgba(16,185,129,.1); color: #34d399; }
+    .ev-type-badge.t-xhr   { background: rgba(245,158,11,.1); color: #fbbf24; }
+    .ev-type-badge.t-custom { background: rgba(99,102,241,.1); color: #818cf8; }
+    .ev-type-badge.t-resource { background: rgba(148,163,184,.08); color: var(--text3); }
+
+    .ev-url {
+      font-family: var(--mono); font-size: 11px;
+      color: var(--text2);
+      word-break: break-all;
+      margin-bottom: 4px;
+    }
+    .ev-details {
+      font-family: var(--mono); font-size: 10.5px;
+      color: var(--text3);
+      display: flex; flex-wrap: wrap; gap: 5px 12px;
+      margin-top: 6px;
+    }
+    .ev-detail { display: flex; align-items: center; gap: 4px; word-break: break-all; }
+    .ev-detail i { font-size: 9px; opacity: .7; flex-shrink: 0; }
+
+    .ev-payload-section { margin-top: 8px; }
+    .ev-payload-toggle {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 10.5px; font-weight: 600; color: var(--accentL);
+      cursor: pointer; user-select: none;
+      padding: 4px 0;
+    }
+    .ev-payload-toggle i {
+      font-size: 8px; transition: transform .2s;
+    }
+    .ev-payload-section.open .ev-payload-toggle i {
+      transform: rotate(90deg);
+    }
+    .ev-payload-body {
+      display: none;
+      margin-top: 6px;
+      padding: 10px 12px;
+      background: rgba(0,0,0,.35);
+      border: 1px solid rgba(99,102,241,.15);
+      border-radius: 6px;
+      font-family: var(--mono);
+      font-size: 10.5px;
+      line-height: 1.7;
+      color: var(--text2);
+      word-break: break-all;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .ev-payload-section.open .ev-payload-body { display: block; }
+    .ev-payload-body .bp-key {
+      color: #93c5fd; font-weight: 600;
+    }
+    .ev-payload-body .bp-str {
+      color: #fde68a;
+    }
+
+    .session-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 10px;
+      margin-bottom: 16px;
+      padding: 14px;
+      background: var(--bg4);
+      border: 1px solid var(--border);
+      border-radius: var(--r2);
+    }
+    .ss-item { text-align: center; }
+    .ss-val {
+      font-size: 18px; font-weight: 800;
+      font-family: var(--mono); line-height: 1.2;
+      color: var(--text);
+    }
+    .ss-label {
+      font-size: 10px; text-transform: uppercase;
+      letter-spacing: .05em; color: var(--text3);
+      font-weight: 600; margin-top: 2px;
+    }
+
+    /* ── FOOTER BAR ── */
+    .card-footer {
+      padding: 8px 20px;
+      border-top: 1px solid var(--border);
+      font-size: 11px; color: var(--text3);
+      font-family: var(--mono);
+      display: none;
+    }
+
+    /* ── ANIMATIONS ── */
+    @keyframes fadeUp { from{opacity:0;transform:translateY(7px)} to{opacity:1;transform:none} }
+    .fade-up { animation: fadeUp .28s ease forwards; }
+
+    @keyframes spin { from{transform:rotate(0)} to{transform:rotate(360deg)} }
+    .spin { animation: spin .7s linear infinite; display:inline-block; }
+
+    @keyframes runPulse { 0%,100%{box-shadow:0 0 16px var(--accentG)} 50%{box-shadow:0 0 28px rgba(99,102,241,.45)} }
+    .btn-primary.pulsing { animation: runPulse 1s infinite; }
+
+    /* ── PAGE FOOTER ── */
+    .page-footer { text-align: center; padding: 20px 16px; font-size: 11.5px; color: var(--text3); }
+    .page-footer span { color: var(--text2); font-weight: 500; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width:640px) {
+      .navbar { padding: 0 14px; }
+      .brand-info { display: none; }
+      .nav-right .btn span { display: none; }
+      .main { padding: 14px 12px 32px; }
+      .settings { flex-direction: column; }
+      .card-header, .card-body { padding: 14px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ╔══════════════ NAVBAR ══════════════╗ -->
+<nav class="navbar">
+  <div class="brand">
+    <div class="brand-logo"><i class="fa-solid fa-chart-bar"></i></div>
+    <div class="brand-info">
+      <div class="brand-name">Instana Analytics</div>
+      <div class="brand-tag">VDS · Vodacom</div>
+    </div>
+  </div>
+
+  <div class="nav-right">
+    <div class="sel-wrap">
+      <select id="windowSelect" onchange="setWindow()">
+        <option value="3600000">Last 1 Hour</option>
+        <option value="10800000">Last 3 Hours</option>
+        <option value="21600000">Last 6 Hours</option>
+        <option value="43200000">Last 12 Hours</option>
+        <option value="86400000">Last 24 Hours</option>
+        <option value="259200000" selected>Last 3 Days</option>
+        <option value="604800000">Last 7 Days</option>
+        <option value="2592000000">Last 30 Days</option>
+      </select>
+      <i class="fa-solid fa-chevron-down sel-arrow"></i>
+    </div>
+    <button class="btn btn-ghost" id="settingsToggle" onclick="toggleSettings()" title="Settings">
+      <i class="fa-solid fa-sliders"></i><span>Settings</span>
+    </button>
+    <button class="btn btn-primary" id="runAllBtn" onclick="runAll()">
+      <i class="fa-solid fa-bolt"></i><span>Run All</span>
+    </button>
+    <button class="btn btn-ghost" onclick="exportFullReport()" title="Export Full Report">
+      <i class="fa-solid fa-file-export"></i><span>Export Report</span>
+    </button>
+  </div>
+</nav>
+
+<!-- ╔══════════════ MAIN ══════════════╗ -->
+<div class="main">
+
+  <!-- CORS Notice -->
+  <div class="alert alert-warn" id="corsAlert">
+    <i class="fa-solid fa-triangle-exclamation" style="flex-shrink:0;margin-top:1px;"></i>
+    <div>
+      <strong>Browser CORS Notice</strong> — This dashboard calls the Instana REST API directly. If you see network errors, the API server may block cross-origin browser requests. In that case, serve this file from a local HTTP server or use a CORS proxy. Your network must be able to reach <code style="font-family:monospace;font-size:11px;background:rgba(0,0,0,.3);padding:1px 5px;border-radius:3px;">prod-vodacomsa.instana.io</code>.
+    </div>
+    <button class="alert-close" onclick="document.getElementById('corsAlert').style.display='none'"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+
+  <!-- SETTINGS PANEL -->
+  <div class="settings" id="settingsPanel">
+    <div class="field field-wide">
+      <div class="flabel"><i class="fa-solid fa-key fa-fw"></i> API Token</div>
+      <input class="finput" type="text" id="apiToken" value="PU0L1Fx3T8GPuDVWqXDJew" placeholder="Instana API Token" spellcheck="false" >
+    </div>
+    <div class="field">
+      <div class="flabel"><i class="fa-solid fa-globe fa-fw"></i> URL Filter</div>
+      <input class="finput" type="text" id="urlFilter" value="www.vodacom.co.za" placeholder="URL contains..." spellcheck="false" >
+    </div>
+    <div class="field">
+      <div class="flabel"><i class="fa-solid fa-tag fa-fw"></i> Website Name</div>
+      <input class="finput" type="text" id="websiteName" value="VDS" placeholder="Website name" spellcheck="false" >
+    </div>
+    <div class="field">
+      <div class="flabel"><i class="fa-solid fa-rotate fa-fw"></i> Auto-Refresh</div>
+      <select class="fselect" id="autoRefresh" onchange="setupAutoRefresh()">
+        <option value="0">Off</option>
+        <option value="60000">Every 1 min</option>
+        <option value="300000">Every 5 min</option>
+        <option value="600000">Every 10 min</option>
+        <option value="1800000">Every 30 min</option>
+      </select>
+    </div>
+    <div class="field" style="flex:0;min-width:auto;justify-content:flex-end;">
+      <div class="flabel">&nbsp;</div>
+      <button class="btn btn-primary" style="height:36px;" onclick="runAll()">
+        <i class="fa-solid fa-play"></i> Apply & Run All
+      </button>
+    </div>
+  </div>
+
+  <!-- ╔═══ QUERY CARDS ═══╗ -->
+  <div class="grid">
+
+    <!-- ▸ PLATFORMS -->
+    <div class="card" id="card-platforms">
+      <div class="card-header">
+        <div class="ch-left">
+          <div class="card-icon ci-plat"><i class="fa-solid fa-mobile"></i></div>
+          <div>
+            <div class="card-title">Platforms</div>
+            <div class="card-sub">beacon.meta → <strong>platform</strong> &nbsp;·&nbsp; Export: Platforms.csv</div>
+          </div>
+        </div>
+        <div class="ch-right">
+          <span class="badge b-idle" id="badge-platforms"><span class="dot"></span> Idle</span>
+          <button class="btn btn-ghost btn-sm" id="runBtn-platforms" onclick="runQuery('platforms')">
+            <i class="fa-solid fa-play"></i> Run
+          </button>
+        </div>
+      </div>
+      <div id="body-platforms">
+        <div class="empty-state">
+          <div class="empty-icon">📊</div>
+          <div class="empty-title">No data yet</div>
+          <div class="empty-sub">Click <strong>Run</strong> to fetch Platforms data from Instana</div>
+        </div>
+      </div>
+      <div class="card-footer" id="foot-platforms"></div>
+    </div>
+
+    <!-- ▸ PAGES -->
+    <div class="card" id="card-pages">
+      <div class="card-header">
+        <div class="ch-left">
+          <div class="card-icon ci-page"><i class="fa-solid fa-file-lines"></i></div>
+          <div>
+            <div class="card-title">Pages</div>
+            <div class="card-sub">beacon.meta → <strong>Page_Name</strong> &nbsp;·&nbsp; Export: Pages.csv</div>
+          </div>
+        </div>
+        <div class="ch-right">
+          <span class="badge b-idle" id="badge-pages"><span class="dot"></span> Idle</span>
+          <button class="btn btn-ghost btn-sm" id="runBtn-pages" onclick="runQuery('pages')">
+            <i class="fa-solid fa-play"></i> Run
+          </button>
+        </div>
+      </div>
+      <div id="body-pages">
+        <div class="empty-state">
+          <div class="empty-icon">📄</div>
+          <div class="empty-title">No data yet</div>
+          <div class="empty-sub">Click <strong>Run</strong> to fetch Pages data from Instana</div>
+        </div>
+      </div>
+      <div class="card-footer" id="foot-pages"></div>
+    </div>
+
+    <!-- ▸ PAGE ERRORS -->
+    <div class="card" id="card-pageErrors">
+      <div class="card-header">
+        <div class="ch-left">
+          <div class="card-icon ci-err"><i class="fa-solid fa-circle-exclamation"></i></div>
+          <div>
+            <div class="card-title">Page Errors</div>
+            <div class="card-sub">beacon.meta → <strong>biz_page_error</strong> &nbsp;·&nbsp; Export: PageErrors.csv</div>
+          </div>
+        </div>
+        <div class="ch-right">
+          <span class="badge b-idle" id="badge-pageErrors"><span class="dot"></span> Idle</span>
+          <button class="btn btn-ghost btn-sm" id="runBtn-pageErrors" onclick="runQuery('pageErrors')">
+            <i class="fa-solid fa-play"></i> Run
+          </button>
+        </div>
+      </div>
+      <div id="body-pageErrors">
+        <div class="empty-state">
+          <div class="empty-icon">⚠️</div>
+          <div class="empty-title">No data yet</div>
+          <div class="empty-sub">Click <strong>Run</strong> to fetch Page Errors data from Instana</div>
+        </div>
+      </div>
+      <div class="card-footer" id="foot-pageErrors"></div>
+    </div>
+
+    <!-- ▸ PAGE ERRORS TIMESHIFT COMPARISON -->
+    <div class="card" id="card-timeshift">
+      <div class="card-header">
+        <div class="ch-left">
+          <div class="card-icon" style="background:rgba(168,85,247,.12);color:#c084fc;"><i class="fa-solid fa-clock-rotate-left"></i></div>
+          <div>
+            <div class="card-title">Page Errors — Timeshift Comparison</div>
+            <div class="card-sub">Current window vs. previous period &nbsp;·&nbsp; Δ trend analysis</div>
+          </div>
+        </div>
+        <div class="ch-right">
+          <div class="sel-wrap">
+            <select id="timeshiftOffset" style="font-size:12px;padding:5px 26px 5px 10px;">
+              <option value="1">vs. Previous Period</option>
+              <option value="custom-1d">vs. 1 Day Ago</option>
+              <option value="custom-7d">vs. 7 Days Ago</option>
+              <option value="custom-14d">vs. 14 Days Ago</option>
+              <option value="custom-30d">vs. 30 Days Ago</option>
+            </select>
+            <i class="fa-solid fa-chevron-down sel-arrow"></i>
+          </div>
+          <span class="badge b-idle" id="badge-timeshift"><span class="dot"></span> Idle</span>
+          <button class="btn btn-ghost btn-sm" id="runBtn-timeshift" onclick="runTimeshift()">
+            <i class="fa-solid fa-play"></i> Compare
+          </button>
+        </div>
+      </div>
+      <div id="body-timeshift">
+        <div class="empty-state">
+          <div class="empty-icon">⏱️</div>
+          <div class="empty-title">No comparison data yet</div>
+          <div class="empty-sub">Click <strong>Compare</strong> to fetch Page Errors for both time windows and see how errors have changed</div>
+        </div>
+      </div>
+      <div class="card-footer" id="foot-timeshift"></div>
+    </div>
+
+    <!-- ▸ SESSION BROWSER -->
+    <div class="card" id="card-session">
+      <div class="card-header">
+        <div class="ch-left">
+          <div class="card-icon" style="background:rgba(56,189,248,.12);color:#38bdf8;"><i class="fa-solid fa-route"></i></div>
+          <div>
+            <div class="card-title">Session Browser</div>
+            <div class="card-sub">View full session timeline &nbsp;·&nbsp; All beacons for a user session</div>
+          </div>
+        </div>
+        <div class="ch-right">
+          <span class="badge b-idle" id="badge-session"><span class="dot"></span> Idle</span>
+        </div>
+      </div>
+      <div class="card-body" id="body-session">
+        <div class="session-search-bar">
+          <div class="session-input-wrap">
+            <i class="fa-solid fa-fingerprint session-input-icon"></i>
+            <input class="session-input" id="sessionIdInput" type="text" placeholder="Enter or click a Session ID from beacon payloads above…" spellcheck="false" >
+          </div>
+          <button class="btn btn-primary" id="sessionSearchBtn" onclick="searchSession()">
+            <i class="fa-solid fa-magnifying-glass"></i> Browse Session
+          </button>
+        </div>
+        <div id="sessionResults">
+          <div class="empty-state" style="padding:30px 20px;">
+            <div class="empty-icon">🔍</div>
+            <div class="empty-title">Enter a Session ID</div>
+            <div class="empty-sub">Paste a session ID or click one from the beacon payload drill-downs above to view the complete session timeline</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer" id="foot-session"></div>
+    </div>
+
+  </div><!-- /grid -->
+</div><!-- /main -->
+
+<div class="page-footer">
+  <span>Instana VDS Analytics Dashboard</span> &nbsp;·&nbsp; IBM Instana Website Monitoring &nbsp;·&nbsp; prod-vodacomsa.instana.io
+</div>
+
+<!-- ╔══════════════ SCRIPT ══════════════╗ -->
+<script>
+  'use strict';
+
+  const API_ENDPOINT = 'https://prod-vodacomsa.instana.io/api/website-monitoring/analyze/beacon-groups';
+  const BEACON_ENDPOINT = 'https://prod-vodacomsa.instana.io/api/website-monitoring/analyze/beacons';
+
+  /* ── State ── */
+  let windowSizeMs = 259200000;
+  let autoTimer    = null;
+
+  const EXCLUDED_KEYWORDS = ['validate', 'graphql'];
+
+  const store = {
+    platforms:  { data: [], sort: { col: '_timestamp', dir: 'desc' }, filter: '' },
+    pages:      { data: [], sort: { col: '_timestamp', dir: 'desc' }, filter: '' },
+    pageErrors: { data: [], sort: { col: '_timestamp', dir: 'desc' }, filter: '' },
+  };
+
+  /* ── Query configurations (mirrors the PowerShell scripts) ── */
+  const QUERIES = {
+    platforms: {
+      label:      'Platforms',
+      outputFile: 'Platforms',
+      groupKey:   'platform',
+      columns: [
+        { key: 'Platform',       label: 'Platform',        count: false },
+        { key: 'UniqueSessions', label: 'Unique Sessions',  count: true  },
+        { key: 'LastSeen',       label: 'Last Seen',        count: false, date: true },
+      ],
+      map: item => ({
+        Platform:       item.name || '(unknown)',
+        UniqueSessions: +(item.metrics?.['uniqueSessions.distinct_count']?.[0]?.[1] ?? 0),
+        _timestamp:     item.latestTimestamp ? parseInt(item.latestTimestamp) : (item.earliestTimestamp ? parseInt(item.earliestTimestamp) : 0),
+        LastSeen: item.latestTimestamp
+          ? new Date(parseInt(item.latestTimestamp)).toLocaleString()
+          : (item.earliestTimestamp ? new Date(parseInt(item.earliestTimestamp)).toLocaleString() : 'N/A'),
+      }),
+    },
+    pages: {
+      label:      'Pages',
+      outputFile: 'Pages',
+      groupKey:   'Page_Name',
+      columns: [
+        { key: 'PageName',       label: 'Page Name',        count: false },
+        { key: 'UniqueSessions', label: 'Unique Sessions',  count: true  },
+        { key: 'LastSeen',       label: 'Last Seen',        count: false, date: true },
+      ],
+      map: item => ({
+        PageName:       item.name || '(unknown)',
+        UniqueSessions: +(item.metrics?.['uniqueSessions.distinct_count']?.[0]?.[1] ?? 0),
+        _timestamp:     item.latestTimestamp ? parseInt(item.latestTimestamp) : (item.earliestTimestamp ? parseInt(item.earliestTimestamp) : 0),
+        LastSeen: item.latestTimestamp
+          ? new Date(parseInt(item.latestTimestamp)).toLocaleString()
+          : (item.earliestTimestamp ? new Date(parseInt(item.earliestTimestamp)).toLocaleString() : 'N/A'),
+      }),
+    },
+    pageErrors: {
+      label:      'Page Errors',
+      outputFile: 'PageErrors',
+      groupKey:   'biz_page_error',
+      columns: [
+        { key: 'ErrorMessage',   label: 'Error Message',    count: false },
+        { key: 'UniqueSessions', label: 'Unique Sessions',  count: true  },
+        { key: 'LastSeen',       label: 'Last Seen',        count: false, date: true },
+      ],
+      map: item => ({
+        ErrorMessage:   item.name || '(unknown)',
+        UniqueSessions: +(item.metrics?.['uniqueSessions.distinct_count']?.[0]?.[1] ?? 0),
+        _timestamp:     item.latestTimestamp ? parseInt(item.latestTimestamp) : (item.earliestTimestamp ? parseInt(item.earliestTimestamp) : 0),
+        LastSeen: item.latestTimestamp
+          ? new Date(parseInt(item.latestTimestamp)).toLocaleString()
+          : (item.earliestTimestamp ? new Date(parseInt(item.earliestTimestamp)).toLocaleString() : 'N/A'),
+      }),
+    },
+  };
+
+  /* ── Helpers ── */
+  const esc = str => String(str ?? '').replace(/[&<>"']/g, c =>
+    ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+
+  const $ = id => document.getElementById(id);
+  const getToken = () => $('apiToken').value.trim();
+  const getUrl   = () => $('urlFilter').value.trim();
+  const getSite  = () => $('websiteName').value.trim();
+
+  function setWindow() {
+    windowSizeMs = parseInt($('windowSelect').value);
+  }
+
+  function toggleSettings() {
+    const p = $('settingsPanel');
+    const hidden = p.style.display === 'none';
+    p.style.display = hidden ? '' : 'none';
+    $('settingsToggle').innerHTML = hidden
+      ? '<i class="fa-solid fa-sliders"></i><span>Settings</span>'
+      : '<i class="fa-solid fa-sliders"></i><span>Settings</span>';
+  }
+
+  /* ── Request body builder ── */
+  function buildBody(groupKey) {
+    const now = Date.now();
+    return {
+      tagFilterExpression: {
+        type: 'EXPRESSION',
+        logicalOperator: 'AND',
+        elements: [
+          { type:'TAG_FILTER', name:'beacon.location.url',    operator:'CONTAINS', entity:'NOT_APPLICABLE', value: getUrl()  },
+          { type:'TAG_FILTER', name:'beacon.customEvent.name',operator:'CONTAINS', entity:'NOT_APPLICABLE', value:'page_error' },
+          { type:'TAG_FILTER', name:'beacon.website.name',    operator:'EQUALS',   entity:'NOT_APPLICABLE', value: getSite() },
+        ],
+      },
+      type: 'CUSTOM',
+      metrics: [{ metric:'uniqueSessions', aggregation:'DISTINCT_COUNT' }],
+      timeFrame: { to: now, focusedMoment: now, autoRefresh: false, windowSize: windowSizeMs },
+      order: { by:'timestamp', direction:'DESC' },
+      requestedTags: ['log.custom','log.level','log.exception.type','log.exception.message','log.exception.stackTrace'],
+      group: { groupbyTag:'beacon.meta', groupbyTagSecondLevelKey: groupKey, tagType:'KEY_VALUE_PAIR' },
+    };
+  }
+
+  /* ── UI state helpers ── */
+  function setBadge(id, type, text) {
+    const el = $(`badge-${id}`);
+    if (!el) return;
+    const dotClass = type === 'running' ? 'dot blink' : 'dot';
+    el.className = `badge b-${type}`;
+    el.innerHTML = `<span class="${dotClass}"></span> ${text}`;
+  }
+
+  function setCardClass(id, cls) {
+    const c = $(`card-${id}`);
+    c.classList.remove('running','done','errored');
+    if (cls) c.classList.add(cls);
+  }
+
+  function showSkeleton(id) {
+    $(`body-${id}`).innerHTML = Array.from({length:7}).map(() => `
+      <div class="skel-row">
+        <div class="skel" style="width:${28+Math.random()*44}%;"></div>
+        <div class="skel" style="width:${8+Math.random()*12}%;margin-left:auto;"></div>
+      </div>`).join('');
+  }
+
+  function showError(id, msg) {
+    $(`body-${id}`).innerHTML = `
+      <div class="err-box">
+        <i class="fa-solid fa-circle-xmark"></i>
+        <div><strong>Query Failed</strong><br/>${esc(msg)}<br/>
+        <small style="opacity:.7;margin-top:4px;display:block;">Check API token, network access, and browser CORS policy.</small></div>
+      </div>`;
+  }
+
+  /* ── Run single query ── */
+  async function runQuery(id) {
+    const cfg = QUERIES[id];
+    if (!getToken()) { showError(id,'API token is empty.'); return; }
+
+    setBadge(id, 'running', 'Fetching…');
+    setCardClass(id, 'running');
+    showSkeleton(id);
+    $(`runBtn-${id}`).disabled = true;
+
+    try {
+      const res = await fetch(API_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'authorization': `apiToken ${getToken()}`,
+        },
+        body: JSON.stringify(buildBody(cfg.groupKey)),
+      });
+
+      if (!res.ok) {
+        const txt = await res.text().catch(() => '');
+        throw new Error(`HTTP ${res.status} — ${txt.slice(0,300)}`);
+      }
+
+      const result = await res.json();
+      const items  = Array.isArray(result.items) ? result.items : [];
+      const rows   = items.map(cfg.map)
+        .filter(row => {
+          const text = Object.values(row).join(' ').toLowerCase();
+          return !EXCLUDED_KEYWORDS.some(kw => text.includes(kw));
+        })
+        .sort((a,b) => b._timestamp - a._timestamp);
+
+      store[id].data   = rows;
+      store[id].filter = '';
+      store[id].sort   = { col:'_timestamp', dir:'desc' };
+
+      renderTable(id);
+      setBadge(id, 'done', `${rows.length} records`);
+      setCardClass(id, 'done');
+
+      const foot = $(`foot-${id}`);
+      foot.style.display = 'block';
+      foot.innerHTML = `<i class="fa-solid fa-check-circle" style="color:var(--green);margin-right:5px;"></i>` +
+        `Last fetched: ${new Date().toLocaleString()} &nbsp;·&nbsp; Window: ${$('windowSelect').options[$('windowSelect').selectedIndex].text} &nbsp;·&nbsp; ${rows.length} records`;
+
+    } catch (err) {
+      showError(id, err.message);
+      setBadge(id, 'error', 'Error');
+      setCardClass(id, 'errored');
+      const foot = $(`foot-${id}`);
+      foot.style.display = 'block';
+      foot.innerHTML = `<i class="fa-solid fa-circle-xmark" style="color:var(--red);margin-right:5px;"></i>Failed at ${new Date().toLocaleString()}`;
+    } finally {
+      $(`runBtn-${id}`).disabled = false;
+    }
+  }
+
+  /* ── Run all ── */
+  async function runAll() {
+    const btn = $('runAllBtn');
+    btn.disabled = true;
+    btn.classList.add('pulsing');
+    btn.innerHTML = '<i class="fa-solid fa-spinner spin"></i><span>Running…</span>';
+
+    await Promise.all(Object.keys(QUERIES).map(id => runQuery(id)));
+
+    btn.classList.remove('pulsing');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-bolt"></i><span>Run All</span>';
+  }
+
+  /* ── Render table ── */
+  function renderTable(id) {
+    const cfg  = QUERIES[id];
+    const st   = store[id];
+    const el   = $(`body-${id}`);
+    const fLow = st.filter.toLowerCase();
+
+    // filter (exclude internal _timestamp field from search)
+    let rows = st.data.filter(row =>
+      Object.entries(row)
+        .filter(([k]) => !k.startsWith('_'))
+        .some(([, v]) => String(v).toLowerCase().includes(fLow))
+    );
+
+    // sort
+    const { col, dir } = st.sort;
+    rows = rows.slice().sort((a,b) => {
+      const av = a[col], bv = b[col];
+      if (typeof av === 'number' && typeof bv === 'number')
+        return dir === 'asc' ? av - bv : bv - av;
+      const as = String(av).toLowerCase(), bs = String(bv).toLowerCase();
+      return dir === 'asc' ? as.localeCompare(bs) : bs.localeCompare(as);
+    });
+
+    const maxVal = Math.max(...rows.map(r => r.UniqueSessions), 1);
+
+    /* header — date columns sort by _timestamp for correct chronological order */
+    const thead = cfg.columns.map(c => {
+      const sortKey = c.date ? '_timestamp' : c.key;
+      const sorted = st.sort.col === sortKey;
+      const arrow  = sorted ? (st.sort.dir === 'asc' ? '↑' : '↓') : '↕';
+      return `<th class="${sorted?'th-sorted':''}" onclick="sortCol('${id}','${sortKey}')">
+        ${esc(c.label)} <span class="th-arrow">${arrow}</span>
+      </th>`;
+    }).join('');
+
+    /* rows — with drill-down support */
+    const hasDrill = !!DRILLDOWN_CONFIG[id];
+    const tbody = rows.length === 0
+      ? `<tr><td colspan="${cfg.columns.length}" style="text-align:center;padding:28px;color:var(--text3);">No records match your filter</td></tr>`
+      : rows.map((row, i) => {
+          const cells = cfg.columns.map(c => {
+            if (c.count) {
+              const barW = Math.max(Math.round((row[c.key] / maxVal) * 160), 3);
+              return `<td><div class="bar-cell">
+                <span class="td-count">${Number(row[c.key]).toLocaleString()}</span>
+                <div class="bar" style="width:${barW}px;"></div>
+              </div></td>`;
+            }
+            if (c.date) return `<td class="td-date">${esc(row[c.key])}</td>`;
+            return `<td title="${esc(row[c.key])}">${esc(row[c.key])}</td>`;
+          }).join('');
+          const drillClass = hasDrill ? ' drillable' : '';
+          const drillAttr  = hasDrill ? ` onclick="toggleDrilldown('${id}',${i},this)"` : '';
+          return `<tr class="fade-up${drillClass}" style="animation-delay:${Math.min(i*.018,.3)}s"${drillAttr}>${cells}</tr>`;
+        }).join('');
+
+    el.innerHTML = `
+      <div class="card-body">
+        <div class="toolbar">
+          <div class="search-wrap">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input class="search-input" placeholder="Filter results…"
+              value="${esc(st.filter)}"
+              oninput="applyFilter('${id}',this.value)" />
+          </div>
+          <div class="toolbar-right">
+            <span class="row-count">${rows.length} / ${st.data.length} rows</span>
+            <div class="exports">
+              <button class="btn btn-ghost btn-xs" title="Export CSV"   onclick="exportCSV('${id}')">
+                <i class="fa-solid fa-file-csv"></i> CSV
+              </button>
+              <button class="btn btn-ghost btn-xs" title="Export Excel" onclick="exportExcel('${id}')">
+                <i class="fa-solid fa-file-excel"></i> Excel
+              </button>
+              <button class="btn btn-ghost btn-xs" title="Export JSON"  onclick="exportJSON('${id}')">
+                <i class="fa-solid fa-file-code"></i> JSON
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr>${thead}</tr></thead>
+            <tbody>${tbody}</tbody>
+          </table>
+        </div>
+      </div>`;
+  }
+
+  function applyFilter(id, val) {
+    store[id].filter = val;
+    renderTable(id);
+  }
+
+  function sortCol(id, col) {
+    const s = store[id].sort;
+    if (s.col === col) {
+      // Toggle direction
+      s.dir = s.dir === 'desc' ? 'asc' : 'desc';
+    } else {
+      s.col = col;
+      // Numeric columns default to desc (highest/newest first); text columns default to asc
+      s.dir = (col === 'UniqueSessions' || col === '_timestamp') ? 'desc' : 'asc';
+    }
+    renderTable(id);
+  }
+
+  /* ── Filtered data helper ── */
+  function filteredRows(id) {
+    const st   = store[id];
+    const fLow = st.filter.toLowerCase();
+    return st.data.filter(r =>
+      Object.entries(r).filter(([k]) => !k.startsWith('_')).some(([, v]) => String(v).toLowerCase().includes(fLow))
+    );
+  }
+
+  /* ── Exports ── */
+  function exportCSV(id) {
+    const cfg  = QUERIES[id];
+    const rows = filteredRows(id);
+    if (!rows.length) return;
+    const keys   = cfg.columns.map(c => c.key);
+    const header = keys.join(',');
+    const body   = rows.map(r => keys.map(k => `"${String(r[k]).replace(/"/g,'""')}"`).join(',')).join('\n');
+    dl(`${cfg.outputFile}.csv`, `${header}\n${body}`, 'text/csv');
+  }
+
+  function exportExcel(id) {
+    const cfg  = QUERIES[id];
+    const rows = filteredRows(id);
+    if (!rows.length) return;
+    if (typeof XLSX === 'undefined') { console.error('SheetJS not loaded'); return; }
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, cfg.label);
+    XLSX.writeFile(wb, `${cfg.outputFile}.xlsx`);
+  }
+
+  function exportJSON(id) {
+    const cfg  = QUERIES[id];
+    const rows = filteredRows(id);
+    if (!rows.length) return;
+    dl(`${cfg.outputFile}.json`, JSON.stringify(rows, null, 2), 'application/json');
+  }
+
+  function dl(name, content, type) {
+    const a    = document.createElement('a');
+    a.href     = URL.createObjectURL(new Blob([content], { type }));
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  }
+
+  /* ── FULL REPORT EXPORT ── */
+  function exportFullReport() {
+    if (typeof XLSX === 'undefined') { console.error('SheetJS not loaded'); return; }
+
+    const wb = XLSX.utils.book_new();
+    const now = new Date();
+    const windowLabel = $('windowSelect').options[$('windowSelect').selectedIndex]?.text || '';
+    const siteName = $('websiteName').value || 'VDS';
+
+    // ─── Summary Sheet ───
+    const summaryData = [
+      { Field: 'Report Generated', Value: now.toLocaleString() },
+      { Field: 'Site', Value: siteName },
+      { Field: 'Time Window', Value: windowLabel },
+      { Field: 'URL Filter', Value: $('urlFilter').value || '(none)' },
+      { Field: '', Value: '' },
+      { Field: 'Panel', Value: 'Rows' },
+      { Field: 'Platforms', Value: store.platforms.data.length },
+      { Field: 'Pages', Value: store.pages.data.length },
+      { Field: 'Page Errors', Value: store.pageErrors.data.length },
+      { Field: 'Timeshift Comparison', Value: timeshiftStore.merged.length },
+    ];
+    const wsSummary = XLSX.utils.json_to_sheet(summaryData);
+    wsSummary['!cols'] = [{ wch: 22 }, { wch: 50 }];
+    XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
+
+    // ─── Platforms Sheet ───
+    if (store.platforms.data.length > 0) {
+      const platData = store.platforms.data.map(r => ({
+        'Platform': r.Platform,
+        'Unique Sessions': r.UniqueSessions,
+        'Last Seen': r.LastSeen,
+      }));
+      const wsPlat = XLSX.utils.json_to_sheet(platData);
+      wsPlat['!cols'] = [{ wch: 25 }, { wch: 16 }, { wch: 22 }];
+      XLSX.utils.book_append_sheet(wb, wsPlat, 'Platforms');
+    }
+
+    // ─── Pages Sheet ───
+    if (store.pages.data.length > 0) {
+      const pageData = store.pages.data.map(r => ({
+        'Page Name': r.PageName,
+        'Unique Sessions': r.UniqueSessions,
+        'Last Seen': r.LastSeen,
+      }));
+      const wsPages = XLSX.utils.json_to_sheet(pageData);
+      wsPages['!cols'] = [{ wch: 50 }, { wch: 16 }, { wch: 22 }];
+      XLSX.utils.book_append_sheet(wb, wsPages, 'Pages');
+    }
+
+    // ─── Page Errors Sheet ───
+    if (store.pageErrors.data.length > 0) {
+      const errData = store.pageErrors.data.map(r => ({
+        'Error Message': r.ErrorMessage,
+        'Unique Sessions': r.UniqueSessions,
+        'Last Seen': r.LastSeen,
+      }));
+      const wsErrors = XLSX.utils.json_to_sheet(errData);
+      wsErrors['!cols'] = [{ wch: 60 }, { wch: 16 }, { wch: 22 }];
+      XLSX.utils.book_append_sheet(wb, wsErrors, 'Page Errors');
+    }
+
+    // ─── Timeshift Comparison Sheet ───
+    if (timeshiftStore.merged.length > 0) {
+      const tsData = timeshiftStore.merged.map(r => ({
+        'Error Message': r.name,
+        'Current Period': r.current || '',
+        'Previous Period': r.previous || '',
+        'Delta': r.delta === 0 ? '' : r.delta,
+        '% Change': (isFinite(r.pctChange) ? r.pctChange.toFixed(1) : '100.0') + '%',
+        'Trend': r.trend,
+      }));
+      const wsTs = XLSX.utils.json_to_sheet(tsData);
+      wsTs['!cols'] = [{ wch: 60 }, { wch: 14 }, { wch: 14 }, { wch: 10 }, { wch: 12 }, { wch: 10 }];
+      XLSX.utils.book_append_sheet(wb, wsTs, 'Timeshift Comparison');
+
+      // ─── New Errors Only Sheet ───
+      const newErrs = timeshiftStore.merged.filter(r => r.trend === 'new');
+      if (newErrs.length > 0) {
+        const newData = newErrs.map(r => ({
+          'Error Message (NEW)': r.name,
+          'Sessions': r.current,
+          'First Seen In': 'Current Period',
+        }));
+        const wsNew = XLSX.utils.json_to_sheet(newData);
+        wsNew['!cols'] = [{ wch: 60 }, { wch: 12 }, { wch: 18 }];
+        XLSX.utils.book_append_sheet(wb, wsNew, 'New Errors');
+      }
+
+      // ─── Gone Errors Sheet ───
+      const goneErrs = timeshiftStore.merged.filter(r => r.trend === 'gone');
+      if (goneErrs.length > 0) {
+        const goneData = goneErrs.map(r => ({
+          'Error Message (RESOLVED)': r.name,
+          'Previous Sessions': r.previous,
+          'Status': 'No longer occurring',
+        }));
+        const wsGone = XLSX.utils.json_to_sheet(goneData);
+        wsGone['!cols'] = [{ wch: 60 }, { wch: 18 }, { wch: 22 }];
+        XLSX.utils.book_append_sheet(wb, wsGone, 'Resolved Errors');
+      }
+
+      // ─── Trending Up Sheet ───
+      const upErrs = timeshiftStore.merged.filter(r => r.trend === 'up');
+      if (upErrs.length > 0) {
+        const upData = upErrs.map(r => ({
+          'Error Message (TRENDING UP)': r.name,
+          'Current': r.current,
+          'Previous': r.previous,
+          'Delta': r.delta,
+          '% Increase': r.pctChange.toFixed(1) + '%',
+        }));
+        const wsUp = XLSX.utils.json_to_sheet(upData);
+        wsUp['!cols'] = [{ wch: 60 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 12 }];
+        XLSX.utils.book_append_sheet(wb, wsUp, 'Trending Up');
+      }
+    }
+
+    // ─── Generate filename: VDS_Front_End_Error_Info - DD-MM-YY.xlsx ───
+    const dd = String(now.getDate()).padStart(2, '0');
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const yy = String(now.getFullYear()).slice(-2);
+    const fileName = `VDS_Front_End_Error_Info - ${dd}-${mm}-${yy}.xlsx`;
+
+    XLSX.writeFile(wb, fileName);
+  }
+
+  /* ── TIMESHIFT COMPARISON (Page Errors) ── */
+  let timeshiftStore = { current: [], previous: [], merged: [], sort: { col: 'delta', dir: 'desc' }, filter: '' };
+
+  function getTimeshiftOffset() {
+    const val = $('timeshiftOffset').value;
+    if (val === '1') return windowSizeMs; // previous period (same window length)
+    if (val === 'custom-1d') return 86400000;
+    if (val === 'custom-7d') return 604800000;
+    if (val === 'custom-14d') return 1209600000;
+    if (val === 'custom-30d') return 2592000000;
+    return windowSizeMs;
+  }
+
+  function buildTimeshiftBody(offsetMs) {
+    const now = Date.now();
+    const to  = now - offsetMs;
+    return {
+      tagFilterExpression: {
+        type: 'EXPRESSION',
+        logicalOperator: 'AND',
+        elements: [
+          { type:'TAG_FILTER', name:'beacon.location.url',    operator:'CONTAINS', entity:'NOT_APPLICABLE', value: getUrl()  },
+          { type:'TAG_FILTER', name:'beacon.customEvent.name',operator:'CONTAINS', entity:'NOT_APPLICABLE', value:'page_error' },
+          { type:'TAG_FILTER', name:'beacon.website.name',    operator:'EQUALS',   entity:'NOT_APPLICABLE', value: getSite() },
+        ],
+      },
+      type: 'CUSTOM',
+      metrics: [{ metric:'uniqueSessions', aggregation:'DISTINCT_COUNT' }],
+      timeFrame: { to: to, focusedMoment: to, autoRefresh: false, windowSize: windowSizeMs },
+      order: { by:'timestamp', direction:'DESC' },
+      requestedTags: ['log.custom','log.level','log.exception.type','log.exception.message','log.exception.stackTrace'],
+      group: { groupbyTag:'beacon.meta', groupbyTagSecondLevelKey:'biz_page_error', tagType:'KEY_VALUE_PAIR' },
+    };
+  }
+
+  async function runTimeshift() {
+    if (!getToken()) { showError('timeshift','API token is empty.'); return; }
+
+    setBadge('timeshift', 'running', 'Comparing…');
+    setCardClass('timeshift', 'running');
+    showSkeleton('timeshift');
+    $('runBtn-timeshift').disabled = true;
+
+    const offsetMs = getTimeshiftOffset();
+
+    try {
+      const headers = {
+        'Content-Type':  'application/json',
+        'authorization': `apiToken ${getToken()}`,
+      };
+
+      // Fetch current period + previous period in parallel
+      const [resCurrent, resPrevious] = await Promise.all([
+        fetch(API_ENDPOINT, { method:'POST', headers, body: JSON.stringify(buildBody('biz_page_error')) }),
+        fetch(API_ENDPOINT, { method:'POST', headers, body: JSON.stringify(buildTimeshiftBody(offsetMs)) }),
+      ]);
+
+      if (!resCurrent.ok) {
+        const txt = await resCurrent.text().catch(() => '');
+        throw new Error(`Current period: HTTP ${resCurrent.status} — ${txt.slice(0,200)}`);
+      }
+      if (!resPrevious.ok) {
+        const txt = await resPrevious.text().catch(() => '');
+        throw new Error(`Previous period: HTTP ${resPrevious.status} — ${txt.slice(0,200)}`);
+      }
+
+      const dataCurrent  = await resCurrent.json();
+      const dataPrevious = await resPrevious.json();
+
+      const mapRow = item => ({
+        name: item.name || '(unknown)',
+        sessions: +(item.metrics?.['uniqueSessions.distinct_count']?.[0]?.[1] ?? 0),
+      });
+
+      const currentRows  = (dataCurrent.items || []).map(mapRow)
+        .filter(r => !EXCLUDED_KEYWORDS.some(kw => r.name.toLowerCase().includes(kw)));
+      const previousRows = (dataPrevious.items || []).map(mapRow)
+        .filter(r => !EXCLUDED_KEYWORDS.some(kw => r.name.toLowerCase().includes(kw)));
+
+      timeshiftStore.current  = currentRows;
+      timeshiftStore.previous = previousRows;
+      timeshiftStore.filter   = '';
+      timeshiftStore.sort     = { col:'_trendOrder', dir:'asc' };
+
+      // Merge: union of all error names
+      const allNames = new Set([...currentRows.map(r=>r.name), ...previousRows.map(r=>r.name)]);
+      const currentMap  = Object.fromEntries(currentRows.map(r => [r.name, r.sessions]));
+      const previousMap = Object.fromEntries(previousRows.map(r => [r.name, r.sessions]));
+
+      // Trend order: new=0 (top), up=1, gone=2, down=3, same=4
+      const TREND_ORDER = { 'new': 0, 'up': 1, 'gone': 2, 'down': 3, 'same': 4 };
+      const merged = [];
+      for (const name of allNames) {
+        const curr = currentMap[name] || 0;
+        const prev = previousMap[name] || 0;
+        const delta = curr - prev;
+        const pctChange = prev > 0 ? ((curr - prev) / prev) * 100 : (curr > 0 ? 100 : 0);
+        let trend = 'same';
+        if (prev === 0 && curr > 0) trend = 'new';
+        else if (curr === 0 && prev > 0) trend = 'gone';
+        else if (delta > 0) trend = 'up';
+        else if (delta < 0) trend = 'down';
+        merged.push({ name, current: curr, previous: prev, delta, pctChange, trend, _trendOrder: TREND_ORDER[trend] });
+      }
+
+      timeshiftStore.merged = merged;
+      renderTimeshiftTable();
+
+      setBadge('timeshift', 'done', `${merged.length} errors compared`);
+      setCardClass('timeshift', 'done');
+
+      const foot = $('foot-timeshift');
+      foot.style.display = 'block';
+      const offsetLabel = $('timeshiftOffset').options[$('timeshiftOffset').selectedIndex].text;
+      foot.innerHTML = `<i class="fa-solid fa-check-circle" style="color:var(--green);margin-right:5px;"></i>` +
+        `Compared at ${new Date().toLocaleString()} &nbsp;·&nbsp; ${offsetLabel} &nbsp;·&nbsp; ${merged.length} unique errors`;
+
+    } catch (err) {
+      showError('timeshift', err.message);
+      setBadge('timeshift', 'error', 'Error');
+      setCardClass('timeshift', 'errored');
+      const foot = $('foot-timeshift');
+      foot.style.display = 'block';
+      foot.innerHTML = `<i class="fa-solid fa-circle-xmark" style="color:var(--red);margin-right:5px;"></i>Failed at ${new Date().toLocaleString()}`;
+    } finally {
+      $('runBtn-timeshift').disabled = false;
+    }
+  }
+
+  function renderTimeshiftTable() {
+    const el = $('body-timeshift');
+    const st = timeshiftStore;
+    const fLow = st.filter.toLowerCase();
+
+    let rows = st.merged.filter(r => r.name.toLowerCase().includes(fLow));
+
+    // Sort — when sorting by _trendOrder, use current sessions as secondary sort
+    const { col, dir } = st.sort;
+    rows = rows.slice().sort((a,b) => {
+      const av = a[col], bv = b[col];
+      let cmp = 0;
+      if (typeof av === 'number' && typeof bv === 'number') {
+        cmp = dir === 'asc' ? av - bv : bv - av;
+      } else {
+        const as = String(av).toLowerCase(), bs = String(bv).toLowerCase();
+        cmp = dir === 'asc' ? as.localeCompare(bs) : bs.localeCompare(as);
+      }
+      // Secondary sort: within same trend group, newest/highest current sessions first
+      if (cmp === 0 && col === '_trendOrder') return b.current - a.current;
+      return cmp;
+    });
+
+    // Summary stats
+    const totalNew  = st.merged.filter(r => r.trend === 'new').length;
+    const totalGone = st.merged.filter(r => r.trend === 'gone').length;
+    const totalUp   = st.merged.filter(r => r.trend === 'up').length;
+    const totalDown = st.merged.filter(r => r.trend === 'down').length;
+    const totalSame = st.merged.filter(r => r.trend === 'same').length;
+
+    const maxSessions = Math.max(...rows.map(r => Math.max(r.current, r.previous)), 1);
+
+    const trendIcon = (trend) => {
+      if (trend === 'up')   return '<i class="fa-solid fa-arrow-up"></i>';
+      if (trend === 'down') return '<i class="fa-solid fa-arrow-down"></i>';
+      if (trend === 'new')  return '<i class="fa-solid fa-plus"></i>';
+      if (trend === 'gone') return '<i class="fa-solid fa-minus"></i>';
+      return '<i class="fa-solid fa-equals"></i>';
+    };
+
+    const deltaCell = (row) => {
+      const cls = row.trend;
+      const sign = row.delta > 0 ? '+' : '';
+      let label = `${sign}${row.delta}`;
+      if (row.trend === 'new') label = 'NEW';
+      if (row.trend === 'gone') label = 'RESOLVED';
+      if (row.trend === 'same') label = '—';
+      return `<span class="ts-delta ${cls}">${trendIcon(row.trend)} ${label}</span>`;
+    };
+
+    const pctCell = (row) => {
+      if (row.trend === 'new') return '<span style="color:#fbbf24;font-family:var(--mono);font-size:11px;">∞</span>';
+      if (row.trend === 'gone') return '<span style="color:#94a3b8;font-family:var(--mono);font-size:11px;">-100%</span>';
+      if (row.trend === 'same') return '<span style="color:var(--text3);font-family:var(--mono);font-size:11px;">0%</span>';
+      const sign = row.pctChange > 0 ? '+' : '';
+      const color = row.pctChange > 0 ? '#f87171' : '#34d399';
+      return `<span style="color:${color};font-family:var(--mono);font-size:11px;">${sign}${row.pctChange.toFixed(1)}%</span>`;
+    };
+
+    const barCell = (row) => {
+      const currW = Math.max(Math.round((row.current / maxSessions) * 100), 1);
+      const prevW = Math.max(Math.round((row.previous / maxSessions) * 100), 1);
+      return `<div class="ts-bar-wrap">
+        <div class="ts-bar current" style="width:${currW}px;" title="Current: ${row.current}"></div>
+        <div class="ts-bar previous" style="width:${prevW}px;" title="Previous: ${row.previous}"></div>
+      </div>`;
+    };
+
+    const makeTh = (key, label) => {
+      const sorted = st.sort.col === key;
+      const arrow  = sorted ? (st.sort.dir === 'asc' ? '↑' : '↓') : '↕';
+      return `<th class="${sorted?'th-sorted':''}" onclick="sortTimeshiftCol('${key}')">
+        ${label} <span class="th-arrow">${arrow}</span>
+      </th>`;
+    };
+
+    const thead = `${makeTh('name','Error Message')}${makeTh('current','Current')}${makeTh('previous','Previous')}${makeTh('delta','Change')}
+      <th>%</th><th>Trend</th>`;
+
+    const tbody = rows.length === 0
+      ? '<tr><td colspan="6" style="text-align:center;padding:28px;color:var(--text3);">No records match your filter</td></tr>'
+      : rows.map((row, i) => `<tr class="fade-up drillable" style="animation-delay:${Math.min(i*.018,.3)}s" onclick="toggleTimeshiftDrill(${i},this)">
+          <td title="${esc(row.name)}">${esc(row.name)}</td>
+          <td class="td-count">${Number(row.current).toLocaleString()}</td>
+          <td style="font-family:var(--mono);font-size:12px;color:var(--text3);">${Number(row.previous).toLocaleString()}</td>
+          <td>${deltaCell(row)}</td>
+          <td>${pctCell(row)}</td>
+          <td>${barCell(row)}</td>
+        </tr>`).join('');
+
+    el.innerHTML = `
+      <div class="card-body">
+        <div class="ts-summary">
+          <div class="ts-stat"><div class="ts-stat-val ts-up">${totalUp}</div><div class="ts-stat-label">Increased</div></div>
+          <div class="ts-stat"><div class="ts-stat-val ts-down">${totalDown}</div><div class="ts-stat-label">Decreased</div></div>
+          <div class="ts-stat"><div class="ts-stat-val ts-new">${totalNew}</div><div class="ts-stat-label">New Errors</div></div>
+          <div class="ts-stat"><div class="ts-stat-val ts-gone">${totalGone}</div><div class="ts-stat-label">Resolved</div></div>
+          <div class="ts-stat"><div class="ts-stat-val ts-same">${totalSame}</div><div class="ts-stat-label">Unchanged</div></div>
+        </div>
+        <div class="ts-legend">
+          <div class="ts-legend-item"><div class="ts-legend-dot" style="background:#f87171;"></div> Increased</div>
+          <div class="ts-legend-item"><div class="ts-legend-dot" style="background:#34d399;"></div> Decreased</div>
+          <div class="ts-legend-item"><div class="ts-legend-dot" style="background:#fbbf24;"></div> New</div>
+          <div class="ts-legend-item"><div class="ts-legend-dot" style="background:#94a3b8;"></div> Resolved</div>
+          <div class="ts-legend-item"><div class="ts-legend-dot" style="background:var(--text3);"></div> Unchanged</div>
+          <div class="ts-legend-item" style="margin-left:auto;">
+            <div class="ts-bar current" style="width:14px;height:4px;border-radius:2px;"></div> Current
+          </div>
+          <div class="ts-legend-item">
+            <div class="ts-bar previous" style="width:14px;height:4px;border-radius:2px;"></div> Previous
+          </div>
+        </div>
+        <div class="toolbar">
+          <div class="search-wrap">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input class="search-input" placeholder="Filter errors…"
+              value="${esc(st.filter)}"
+              oninput="applyTimeshiftFilter(this.value)" />
+          </div>
+          <div class="toolbar-right">
+            <span class="row-count">${rows.length} / ${st.merged.length} errors</span>
+            <div class="exports">
+              <button class="btn btn-ghost btn-xs" title="Export Comparison CSV" onclick="exportTimeshiftCSV()">
+                <i class="fa-solid fa-file-csv"></i> CSV
+              </button>
+              <button class="btn btn-ghost btn-xs" title="Export Comparison Excel" onclick="exportTimeshiftExcel()">
+                <i class="fa-solid fa-file-excel"></i> Excel
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr>${thead}</tr></thead>
+            <tbody>${tbody}</tbody>
+          </table>
+        </div>
+      </div>`;
+  }
+
+  function applyTimeshiftFilter(val) {
+    timeshiftStore.filter = val;
+    renderTimeshiftTable();
+  }
+
+  function sortTimeshiftCol(col) {
+    const s = timeshiftStore.sort;
+    s.dir = (s.col === col && s.dir === 'desc') ? 'asc' : 'desc';
+    s.col = col;
+    if (col === 'name' && s.dir === 'desc') s.dir = 'asc';
+    renderTimeshiftTable();
+  }
+
+  /* ── Timeshift drill-down into beacon call payloads ── */
+  async function toggleTimeshiftDrill(rowIndex, trEl) {
+    const nextRow = trEl.nextElementSibling;
+
+    if (trEl.classList.contains('expanded')) {
+      trEl.classList.remove('expanded');
+      if (nextRow && nextRow.classList.contains('drill-row')) nextRow.remove();
+      return;
+    }
+
+    // Collapse other expanded rows
+    const table = trEl.closest('table');
+    table.querySelectorAll('tr.expanded').forEach(r => {
+      r.classList.remove('expanded');
+      const nr = r.nextElementSibling;
+      if (nr && nr.classList.contains('drill-row')) nr.remove();
+    });
+
+    trEl.classList.add('expanded');
+
+    // Get the filtered+sorted rows to find correct row data
+    const st = timeshiftStore;
+    const fLow = st.filter.toLowerCase();
+    let rows = st.merged.filter(r => r.name.toLowerCase().includes(fLow));
+    const { col, dir } = st.sort;
+    rows = rows.slice().sort((a,b) => {
+      const av = a[col], bv = b[col];
+      let cmp = 0;
+      if (typeof av === 'number' && typeof bv === 'number') {
+        cmp = dir === 'asc' ? av - bv : bv - av;
+      } else {
+        const as = String(av).toLowerCase(), bs = String(bv).toLowerCase();
+        cmp = dir === 'asc' ? as.localeCompare(bs) : bs.localeCompare(as);
+      }
+      if (cmp === 0 && col === '_trendOrder') return b.current - a.current;
+      return cmp;
+    });
+
+    const rowData = rows[rowIndex];
+    if (!rowData) return;
+
+    const errorName = rowData.name;
+
+    // Insert drill row
+    const drillTr = document.createElement('tr');
+    drillTr.className = 'drill-row';
+    drillTr.innerHTML = `<td colspan="6">
+      <div class="drill-container">
+        <div class="drill-header">
+          <i class="fa-solid fa-scroll"></i> Error Call Payloads
+          <span class="drill-breadcrumb" title="${esc(errorName)}"><i class="fa-solid fa-filter" style="font-size:9px;margin-right:3px;"></i>${esc(errorName.substring(0,60))}</span>
+        </div>
+        <div class="drill-loading"><i class="fa-solid fa-spinner spin"></i> Fetching call payloads…</div>
+      </div>
+    </td>`;
+    trEl.after(drillTr);
+
+    // Fetch beacon payloads for this error
+    try {
+      const extraFilters = [{ tag: 'beacon.meta', key: 'biz_page_error', value: errorName }];
+      const body = buildBeaconBody(extraFilters);
+
+      const res = await fetch(BEACON_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'authorization': `apiToken ${getToken()}`,
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const txt = await res.text().catch(() => '');
+        throw new Error(`HTTP ${res.status} — ${txt.slice(0,200)}`);
+      }
+
+      const result = await res.json();
+      const beacons = flattenBeacons(Array.isArray(result.items) ? result.items : (Array.isArray(result) ? result : []));
+      const container = drillTr.querySelector('.drill-container');
+      renderBeaconCards(beacons, container, 'Error Call Payloads', errorName);
+
+    } catch (err) {
+      const container = drillTr.querySelector('.drill-container');
+      container.innerHTML = `
+        <div class="drill-header">
+          <i class="fa-solid fa-scroll"></i> Error Call Payloads
+          <span class="drill-breadcrumb" title="${esc(errorName)}"><i class="fa-solid fa-filter" style="font-size:9px;margin-right:3px;"></i>${esc(errorName.substring(0,60))}</span>
+        </div>
+        <div class="drill-error"><i class="fa-solid fa-circle-xmark" style="margin-right:5px;"></i>${esc(err.message)}</div>`;
+    }
+  }
+
+  function exportTimeshiftCSV() {
+    const rows = timeshiftStore.merged;
+    if (!rows.length) return;
+    const header = 'ErrorMessage,Current,Previous,Delta,PctChange,Trend';
+    const body = rows.map(r =>
+      `"${r.name.replace(/"/g,'""')}",${r.current},${r.previous},${r.delta},${r.pctChange.toFixed(1)},${r.trend}`
+    ).join('\n');
+    dl('PageErrors_Timeshift.csv', `${header}\n${body}`, 'text/csv');
+  }
+
+  function exportTimeshiftExcel() {
+    const rows = timeshiftStore.merged;
+    if (!rows.length) return;
+    if (typeof XLSX === 'undefined') { console.error('SheetJS not loaded'); return; }
+    const data = rows.map(r => ({
+      'Error Message': r.name,
+      'Current Sessions': r.current,
+      'Previous Sessions': r.previous,
+      'Delta': r.delta,
+      '% Change': r.pctChange.toFixed(1) + '%',
+      'Trend': r.trend,
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Timeshift Comparison');
+    XLSX.writeFile(wb, 'PageErrors_Timeshift.xlsx');
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     ── DRILL-DOWN SYSTEM ──
+     Click a row to expand and fetch deeper data from Instana.
+     Each panel has a defined drill path:
+       Platforms  → Pages on that platform → Errors on that page
+       Pages      → Page Errors on that page → Error Types
+       PageErrors → Pages affected by that error
+       ErrorTypes → Specific error messages of that type
+     ══════════════════════════════════════════════════════════ */
+
+  const DRILLDOWN_CONFIG = {
+    platforms: {
+      filterTag: 'beacon.meta',
+      filterKey: 'platform',
+      valueKey:  'Platform',
+      targetGroupKey: 'Page_Name',
+      targetLabel: 'Pages',
+      targetColumns: ['Page Name', 'Sessions'],
+      mapResult: item => ({
+        name: item.name || '(unknown)',
+        sessions: +(item.metrics?.['uniqueSessions.distinct_count']?.[0]?.[1] ?? 0),
+      }),
+      // Level 2: drill further from pages into errors
+      next: {
+        filterTag: 'beacon.meta',
+        filterKey: 'Page_Name',
+        valueKey:  'name',
+        targetGroupKey: 'biz_page_error',
+        targetLabel: 'Page Errors',
+        targetColumns: ['Error Message', 'Sessions'],
+        mapResult: item => ({
+          name: item.name || '(unknown)',
+          sessions: +(item.metrics?.['uniqueSessions.distinct_count']?.[0]?.[1] ?? 0),
+        }),
+      },
+    },
+    pages: {
+      filterTag: 'beacon.meta',
+      filterKey: 'Page_Name',
+      valueKey:  'PageName',
+      targetGroupKey: 'biz_page_error',
+      targetLabel: 'Page Errors',
+      targetColumns: ['Error Message', 'Sessions'],
+      mapResult: item => ({
+        name: item.name || '(unknown)',
+        sessions: +(item.metrics?.['uniqueSessions.distinct_count']?.[0]?.[1] ?? 0),
+      }),
+      next: {
+        filterTag: 'beacon.meta',
+        filterKey: 'biz_page_error',
+        valueKey:  'name',
+        useBeaconDrill: true,
+        targetLabel: 'Error Call Payloads',
+        targetColumns: ['Timestamp', 'Page URL', 'Session', 'Error Details'],
+      },
+    },
+    pageErrors: {
+      filterTag: 'beacon.meta',
+      filterKey: 'biz_page_error',
+      valueKey:  'ErrorMessage',
+      // Special: fetches individual beacons instead of grouped data
+      useBeaconDrill: true,
+      targetLabel: 'Error Call Payloads',
+      targetColumns: ['Timestamp', 'Page URL', 'User Session', 'Error Details'],
+    },
+  };
+
+  function buildDrillBody(groupKey, extraFilters) {
+    const now = Date.now();
+    const baseElements = [
+      { type:'TAG_FILTER', name:'beacon.location.url',    operator:'CONTAINS', entity:'NOT_APPLICABLE', value: getUrl()  },
+      { type:'TAG_FILTER', name:'beacon.customEvent.name',operator:'CONTAINS', entity:'NOT_APPLICABLE', value:'page_error' },
+      { type:'TAG_FILTER', name:'beacon.website.name',    operator:'EQUALS',   entity:'NOT_APPLICABLE', value: getSite() },
+    ];
+    // Add drill-down filters
+    for (const ef of extraFilters) {
+      baseElements.push({
+        type: 'TAG_FILTER',
+        name: `${ef.tag}`,
+        operator: 'EQUALS',
+        entity: 'NOT_APPLICABLE',
+        value: ef.value,
+        key: ef.key,
+      });
+    }
+    return {
+      tagFilterExpression: {
+        type: 'EXPRESSION',
+        logicalOperator: 'AND',
+        elements: baseElements,
+      },
+      type: 'CUSTOM',
+      metrics: [{ metric:'uniqueSessions', aggregation:'DISTINCT_COUNT' }],
+      timeFrame: { to: now, focusedMoment: now, autoRefresh: false, windowSize: windowSizeMs },
+      order: { by:'timestamp', direction:'DESC' },
+      requestedTags: [],
+      group: { groupbyTag:'beacon.meta', groupbyTagSecondLevelKey: groupKey, tagType:'KEY_VALUE_PAIR' },
+    };
+  }
+
+  /* ── Build beacon request body (individual call payloads) ── */
+  function buildBeaconBody(extraFilters) {
+    const now = Date.now();
+    const baseElements = [
+      { type:'TAG_FILTER', name:'beacon.location.url',    operator:'CONTAINS', entity:'NOT_APPLICABLE', value: getUrl()  },
+      { type:'TAG_FILTER', name:'beacon.customEvent.name',operator:'CONTAINS', entity:'NOT_APPLICABLE', value:'page_error' },
+      { type:'TAG_FILTER', name:'beacon.website.name',    operator:'EQUALS',   entity:'NOT_APPLICABLE', value: getSite() },
+    ];
+    for (const ef of extraFilters) {
+      baseElements.push({
+        type: 'TAG_FILTER',
+        name: ef.tag,
+        operator: 'EQUALS',
+        entity: 'NOT_APPLICABLE',
+        value: ef.value,
+        key: ef.key,
+      });
+    }
+    return {
+      tagFilterExpression: {
+        type: 'EXPRESSION',
+        logicalOperator: 'AND',
+        elements: baseElements,
+      },
+      type: 'CUSTOM',
+      timeFrame: { to: now, focusedMoment: now, autoRefresh: false, windowSize: windowSizeMs },
+      order: { by:'timestamp', direction:'DESC' },
+    };
+  }
+
+  /* ── Flatten beacon wrapper ── */
+  /* Instana API returns { beacon: { ...fields }, ... } — unwrap to top-level */
+  function flattenBeacon(b) {
+    if (b && typeof b.beacon === 'object' && b.beacon !== null) {
+      const { beacon, ...rest } = b;
+      // Merge: beacon inner fields are primary, rest (top-level non-beacon keys) supplement
+      return { ...rest, ...beacon, _hasBeaconWrapper: true };
+    }
+    return b;
+  }
+
+  function flattenBeacons(arr) {
+    return arr.map(flattenBeacon);
+  }
+
+  /* ── Render beacon payload cards ── */
+  function classifyBeaconType(b) {
+    const type = (b.type || b.ty || b.beaconType || '').toLowerCase();
+    const ceName = (b.customEventName || b.ce || '').toLowerCase();
+
+    // Explicit typed beacons
+    if (type === 'pl' || type === 'pageload' || type === 'page_load' || type === 'pagechange' || type === 'pc' || type === 'page') return 'page';
+    if (type === 'xhr' || type === 'fetch' || type === 'http' || type === 'xmlhttprequest' || type === 'httprequest' || type === 'http_request') return 'xhr';
+    if (type === 'err' || type === 'error' || type === 'js_error' || type === 'jserror') return 'error';
+    if (type === 'res' || type === 'resource' || type === 'resourceload' || type === 'resource_load') return 'resource';
+
+    // Custom events — sub-classify by customEventName
+    if (type === 'custom' || type === 'ce' || type === 'customevent' || type === 'custom_event') {
+      // SPA route changes = page navigation
+      if (ceName.includes('routechange') || ceName.includes('route_change') || ceName.includes('navigation') || ceName.includes('pageview') || ceName.includes('page_view')) return 'page';
+      // XHR/fetch wrapped as custom
+      if (ceName.includes('xhr') || ceName.includes('fetch') || ceName.includes('http') || ceName.includes('api') || ceName.includes('request')) return 'xhr';
+      // Error wrapped as custom
+      if (ceName.includes('error') || ceName.includes('exception') || ceName.includes('crash')) return 'error';
+      return 'custom';
+    }
+
+    // Fallback heuristics using other fields
+    if (b.pageLoadId && !b.resourceUrl && !b.http_url) return 'page';
+    if (b.errorMessage || b.errorMsg || b.stackTrace || b.errorCount > 0) return 'error';
+    if (b.http_url || b.httpCallUrl) return 'xhr';
+    const url = b.locationUrl || b.pageUrl || b.url || b.http_url || b.resourceUrl || '';
+    if (url.match(/\.(js|css|png|jpg|gif|svg|woff|woff2|ttf|ico|map)/i)) return 'resource';
+    if (url.match(/\/api\/|\/ajax\/|\/graphql|\/rest\//i)) return 'xhr';
+    if (b.duration && b.page && !b.resourceUrl) return 'page';
+    return 'other';
+  }
+
+  function getBeaconTypeBadge(type) {
+    const map = {
+      page:     { label: 'Page Load', color: '#34d399', bg: 'rgba(16,185,129,.1)' },
+      xhr:      { label: 'XHR/Fetch', color: '#fbbf24', bg: 'rgba(245,158,11,.1)' },
+      error:    { label: 'Error',     color: '#f87171', bg: 'rgba(239,68,68,.12)' },
+      resource: { label: 'Resource',  color: '#94a3b8', bg: 'rgba(148,163,184,.08)' },
+      custom:   { label: 'Custom',    color: '#818cf8', bg: 'rgba(99,102,241,.1)' },
+      other:    { label: 'Other',     color: '#64748b', bg: 'rgba(100,116,139,.08)' },
+    };
+    const m = map[type] || map.other;
+    return `<span class="ev-type-badge" style="background:${m.bg};color:${m.color};">${m.label}</span>`;
+  }
+
+  function calcBeaconDuration(b) {
+    // Try explicit duration fields
+    if (b.duration != null && b.duration !== '') return Number(b.duration);
+    if (b.d != null && b.d !== '') return Number(b.d);
+    // Compute from backend/frontend timing
+    if (b.backendTime != null && b.frontendTime != null) return Number(b.backendTime) + Number(b.frontendTime);
+    // loadEventEnd - navigationStart (page loads)
+    if (b.loadEventEnd != null && b.navigationStart != null) return Number(b.loadEventEnd) - Number(b.navigationStart);
+    // responseEnd - requestStart (XHR)
+    if (b.responseEnd != null && b.requestStart != null) return Number(b.responseEnd) - Number(b.requestStart);
+    // t_resp + t_page (Instana specific)
+    if (b.t_resp != null && b.t_page != null) return Number(b.t_resp) + Number(b.t_page);
+    return null;
+  }
+
+  function renderBeaconCards(beacons, container, label, filterValue) {
+    if (beacons.length === 0) {
+      container.innerHTML = `
+        <div class="drill-header">
+          <i class="fa-solid fa-scroll"></i> ${label}
+          <span class="drill-breadcrumb" title="${esc(filterValue)}"><i class="fa-solid fa-filter" style="font-size:9px;margin-right:3px;"></i>${esc(String(filterValue).substring(0,60))}</span>
+        </div>
+        <div class="drill-empty">No individual beacon calls found for this error.</div>`;
+      return;
+    }
+
+    // Classify all beacons
+    const classified = beacons.map(b => ({
+      ...b,
+      _type: classifyBeaconType(b),
+      _duration: calcBeaconDuration(b),
+    }));
+
+    // Summary counts
+    const counts = { page: 0, xhr: 0, error: 0, resource: 0, custom: 0, other: 0 };
+    classified.forEach(b => { counts[b._type] = (counts[b._type] || 0) + 1; });
+
+    // Duration stats
+    const durations = classified.map(b => b._duration).filter(d => d != null && d > 0);
+    const avgDuration = durations.length ? (durations.reduce((a, b) => a + b, 0) / durations.length) : null;
+    const maxDuration = durations.length ? Math.max(...durations) : null;
+    const minDuration = durations.length ? Math.min(...durations) : null;
+
+    // Timestamps for total span
+    const timestamps = classified.map(b => b.timestamp || b.t || b.time || b.startTime).filter(Boolean).map(Number).filter(t => t > 0).sort((a, b) => a - b);
+    const timeSpan = timestamps.length > 1 ? timestamps[timestamps.length - 1] - timestamps[0] : 0;
+    const timeSpanStr = timeSpan > 60000 ? `${(timeSpan / 60000).toFixed(1)} min` : `${(timeSpan / 1000).toFixed(1)} sec`;
+
+    const summaryHtml = `
+      <div class="beacon-summary-bar">
+        <div class="bsb-item"><span class="bsb-val">${beacons.length}</span><span class="bsb-lbl">Total</span></div>
+        ${counts.page > 0 ? `<div class="bsb-item"><span class="bsb-val" style="color:#34d399;">${counts.page}</span><span class="bsb-lbl">Page Loads</span></div>` : ''}
+        ${counts.xhr > 0 ? `<div class="bsb-item"><span class="bsb-val" style="color:#fbbf24;">${counts.xhr}</span><span class="bsb-lbl">XHR/Fetch</span></div>` : ''}
+        ${counts.error > 0 ? `<div class="bsb-item"><span class="bsb-val" style="color:#f87171;">${counts.error}</span><span class="bsb-lbl">Errors</span></div>` : ''}
+        ${counts.resource > 0 ? `<div class="bsb-item"><span class="bsb-val" style="color:#94a3b8;">${counts.resource}</span><span class="bsb-lbl">Resources</span></div>` : ''}
+        ${counts.custom > 0 ? `<div class="bsb-item"><span class="bsb-val" style="color:#818cf8;">${counts.custom}</span><span class="bsb-lbl">Custom</span></div>` : ''}
+        ${avgDuration != null ? `<div class="bsb-item"><span class="bsb-val" style="color:var(--accentL);">${avgDuration.toFixed(0)}ms</span><span class="bsb-lbl">Avg Duration</span></div>` : ''}
+        ${maxDuration != null ? `<div class="bsb-item"><span class="bsb-val" style="color:#fb923c;">${maxDuration.toFixed(0)}ms</span><span class="bsb-lbl">Max Duration</span></div>` : ''}
+        ${timeSpan > 0 ? `<div class="bsb-item"><span class="bsb-val" style="color:var(--text2);">${timeSpanStr}</span><span class="bsb-lbl">Time Span</span></div>` : ''}
+      </div>`;
+
+    const cards = classified.slice(0, 30).map((b, idx) => {
+      const ts = b.timestamp ? new Date(b.timestamp).toLocaleString() : (b.t ? new Date(Number(b.t)).toLocaleString() : 'N/A');
+      const url = b.locationUrl || b.pageUrl || b.url || b.http_url || b.l || 'N/A';
+      const fullSessionId = b.sessionId || '';
+      const sessionId = fullSessionId ? fullSessionId.substring(0, 12) + '…' : 'N/A';
+      const platform = b.platform || b.os || '';
+      const dur = b._duration != null ? `${b._duration.toFixed(0)}ms` : '';
+      const beaconType = b._type;
+
+      // Build payload detail object from all available fields
+      const payload = {};
+      const skipKeys = new Set(['timestamp','locationUrl','pageUrl','sessionId','_type','_duration','_hasBeaconWrapper']);
+      for (const [k, v] of Object.entries(b)) {
+        if (skipKeys.has(k) || v == null || v === '' || v === 'N/A') continue;
+        payload[k] = v;
+      }
+
+      const payloadHtml = Object.entries(payload).map(([k, v]) => {
+        const val = typeof v === 'object' ? JSON.stringify(v) : String(v);
+        return `<span class="bp-key">${esc(k)}</span>: <span class="${typeof v === 'string' ? 'bp-str' : 'bp-val'}">${esc(val.length > 300 ? val.substring(0, 300) + '…' : val)}</span>`;
+      }).join('\n');
+
+      return `<div class="beacon-card bc-${beaconType}" style="animation-delay:${idx * .03}s">
+        <div class="beacon-meta">
+          <span class="beacon-time"><i class="fa-regular fa-clock" style="margin-right:4px;"></i>${ts}</span>
+          ${getBeaconTypeBadge(beaconType)}
+          ${sessionId !== 'N/A' ? `<span class="beacon-tag" style="cursor:pointer;border-color:rgba(56,189,248,.3);color:#38bdf8;" onclick="event.stopPropagation(); browseSession('${esc(fullSessionId)}')" title="Browse full session"><i class="fa-solid fa-route"></i>${esc(sessionId)}</span>` : ''}
+          ${platform ? `<span class="beacon-tag"><i class="fa-solid fa-mobile"></i>${esc(platform)}</span>` : ''}
+          ${dur ? `<span class="beacon-tag" style="border-color:rgba(99,102,241,.2);color:var(--accentL);"><i class="fa-solid fa-stopwatch"></i>${dur}</span>` : ''}
+        </div>
+        <div class="beacon-url"><i class="fa-solid fa-link" style="margin-right:5px;font-size:9px;opacity:.5;"></i>${esc(url)}</div>
+        <div class="beacon-payload">${payloadHtml}</div>
+      </div>`;
+    }).join('');
+
+    container.innerHTML = `
+      <div class="drill-header">
+        <i class="fa-solid fa-scroll"></i> ${label}
+        <span class="drill-breadcrumb" title="${esc(filterValue)}"><i class="fa-solid fa-filter" style="font-size:9px;margin-right:3px;"></i>${esc(String(filterValue).substring(0,60))}</span>
+        <span style="margin-left:auto;font-size:10px;color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0;">${beacons.length} calls (showing max 30)</span>
+      </div>
+      ${summaryHtml}
+      <div class="beacon-list">${cards}</div>`;
+  }
+
+  async function toggleDrilldown(panelId, rowIndex, trEl) {
+    const nextRow = trEl.nextElementSibling;
+
+    // If already expanded, collapse
+    if (trEl.classList.contains('expanded')) {
+      trEl.classList.remove('expanded');
+      if (nextRow && nextRow.classList.contains('drill-row')) {
+        nextRow.remove();
+      }
+      return;
+    }
+
+    // Collapse any other expanded rows in this panel
+    const table = trEl.closest('table');
+    table.querySelectorAll('tr.expanded').forEach(r => {
+      r.classList.remove('expanded');
+      const nr = r.nextElementSibling;
+      if (nr && nr.classList.contains('drill-row')) nr.remove();
+    });
+
+    trEl.classList.add('expanded');
+
+    const cfg  = DRILLDOWN_CONFIG[panelId];
+    const st   = store[panelId];
+    const fLow = st.filter.toLowerCase();
+    let rows = st.data.filter(row =>
+      Object.entries(row).filter(([k]) => !k.startsWith('_')).some(([, v]) => String(v).toLowerCase().includes(fLow))
+    );
+    const { col, dir } = st.sort;
+    rows = rows.slice().sort((a,b) => {
+      const av = a[col], bv = b[col];
+      if (typeof av === 'number' && typeof bv === 'number')
+        return dir === 'asc' ? av - bv : bv - av;
+      const as = String(av).toLowerCase(), bs = String(bv).toLowerCase();
+      return dir === 'asc' ? as.localeCompare(bs) : bs.localeCompare(as);
+    });
+    const rowData = rows[rowIndex];
+    if (!rowData) return;
+
+    const filterValue = rowData[cfg.valueKey];
+
+    // Insert drill-down row
+    const drillTr = document.createElement('tr');
+    drillTr.className = 'drill-row';
+    const colCount = QUERIES[panelId].columns.length;
+    const loadLabel = cfg.useBeaconDrill ? 'call payloads' : cfg.targetLabel.toLowerCase();
+    drillTr.innerHTML = `<td colspan="${colCount}">
+      <div class="drill-container">
+        <div class="drill-header">
+          <i class="fa-solid fa-${cfg.useBeaconDrill ? 'scroll' : 'diagram-project'}"></i> Drill-Down: ${cfg.targetLabel}
+          <span class="drill-breadcrumb" title="${esc(filterValue)}"><i class="fa-solid fa-filter" style="font-size:9px;margin-right:3px;"></i>${esc(String(filterValue).substring(0,60))}</span>
+        </div>
+        <div class="drill-loading"><i class="fa-solid fa-spinner spin"></i> Fetching ${loadLabel}…</div>
+      </div>
+    </td>`;
+    trEl.after(drillTr);
+
+    try {
+      const extraFilters = [{ tag: cfg.filterTag, key: cfg.filterKey, value: filterValue }];
+      const container = drillTr.querySelector('.drill-container');
+
+      // ─── BEACON DRILL (individual call payloads) ───
+      if (cfg.useBeaconDrill) {
+        const body = buildBeaconBody(extraFilters);
+        const res = await fetch(BEACON_ENDPOINT, {
+          method: 'POST',
+          headers: {
+            'Content-Type':  'application/json',
+            'authorization': `apiToken ${getToken()}`,
+          },
+          body: JSON.stringify(body),
+        });
+
+        if (!res.ok) {
+          const txt = await res.text().catch(() => '');
+          throw new Error(`HTTP ${res.status} — ${txt.slice(0,200)}`);
+        }
+
+        const result = await res.json();
+        const beacons = flattenBeacons(Array.isArray(result.items) ? result.items : (Array.isArray(result) ? result : []));
+        renderBeaconCards(beacons, container, cfg.targetLabel, filterValue);
+        return;
+      }
+
+      // ─── GROUPED DRILL (standard) ───
+      const body = buildDrillBody(cfg.targetGroupKey, extraFilters);
+      const res = await fetch(API_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'authorization': `apiToken ${getToken()}`,
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const txt = await res.text().catch(() => '');
+        throw new Error(`HTTP ${res.status} — ${txt.slice(0,200)}`);
+      }
+
+      const result = await res.json();
+      const items = (result.items || []).map(cfg.mapResult)
+        .filter(r => !EXCLUDED_KEYWORDS.some(kw => r.name.toLowerCase().includes(kw)))
+        .sort((a,b) => b.sessions - a.sessions);
+
+      if (items.length === 0) {
+        container.innerHTML = `
+          <div class="drill-header">
+            <i class="fa-solid fa-diagram-project"></i> Drill-Down: ${cfg.targetLabel}
+            <span class="drill-breadcrumb" title="${esc(filterValue)}"><i class="fa-solid fa-filter" style="font-size:9px;margin-right:3px;"></i>${esc(String(filterValue).substring(0,60))}</span>
+          </div>
+          <div class="drill-empty">No ${cfg.targetLabel.toLowerCase()} found for this filter.</div>`;
+        return;
+      }
+
+      const maxS = Math.max(...items.map(r => r.sessions), 1);
+      const drillRows = items.map((item, idx) => {
+        const barW = Math.max(Math.round((item.sessions / maxS) * 120), 2);
+        const hasNext = !!cfg.next;
+        const nextClass = hasNext ? ' drillable' : '';
+        const nextClick = hasNext ? ` onclick="event.stopPropagation(); toggleSubDrill(this, '${panelId}', '${esc(filterValue).replace(/'/g,"\\'")}', '${esc(item.name).replace(/'/g,"\\'")}')"` : '';
+        return `<tr class="${nextClass}" style="animation: fadeUp .2s ease ${idx * .02}s forwards; opacity:0;"${nextClick}>
+          <td title="${esc(item.name)}">${esc(item.name)}</td>
+          <td><div class="bar-cell"><span class="td-count">${Number(item.sessions).toLocaleString()}</span><div class="bar" style="width:${barW}px;"></div></div></td>
+        </tr>`;
+      }).join('');
+
+      container.innerHTML = `
+        <div class="drill-header">
+          <i class="fa-solid fa-diagram-project"></i> Drill-Down: ${cfg.targetLabel}
+          <span class="drill-breadcrumb" title="${esc(filterValue)}"><i class="fa-solid fa-filter" style="font-size:9px;margin-right:3px;"></i>${esc(String(filterValue).substring(0,60))}</span>
+          <span style="margin-left:auto;font-size:10px;color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0;">${items.length} results</span>
+        </div>
+        <table class="drill-table">
+          <thead><tr>${cfg.targetColumns.map(c => `<th>${c}</th>`).join('')}</tr></thead>
+          <tbody>${drillRows}</tbody>
+        </table>
+        ${cfg.next ? '<div style="margin-top:6px;font-size:10px;color:var(--text3);"><i class="fa-solid fa-info-circle" style="margin-right:4px;"></i>Click a row to drill deeper into call payloads</div>' : ''}`;
+
+    } catch (err) {
+      const container = drillTr.querySelector('.drill-container');
+      container.innerHTML = `
+        <div class="drill-header">
+          <i class="fa-solid fa-diagram-project"></i> Drill-Down: ${cfg.targetLabel}
+          <span class="drill-breadcrumb" title="${esc(filterValue)}"><i class="fa-solid fa-filter" style="font-size:9px;margin-right:3px;"></i>${esc(String(filterValue).substring(0,60))}</span>
+        </div>
+        <div class="drill-error"><i class="fa-solid fa-circle-xmark" style="margin-right:5px;"></i>${esc(err.message)}</div>`;
+    }
+  }
+
+  /* ── Level 2 sub-drill (nested inside first drill) ── */
+  async function toggleSubDrill(trEl, panelId, parentValue, clickedValue) {
+    const nextRow = trEl.nextElementSibling;
+
+    if (trEl.classList.contains('expanded')) {
+      trEl.classList.remove('expanded');
+      if (nextRow && nextRow.classList.contains('drill-row')) nextRow.remove();
+      return;
+    }
+
+    // Collapse siblings
+    const tbody = trEl.closest('tbody');
+    tbody.querySelectorAll('tr.expanded').forEach(r => {
+      r.classList.remove('expanded');
+      const nr = r.nextElementSibling;
+      if (nr && nr.classList.contains('drill-row')) nr.remove();
+    });
+
+    trEl.classList.add('expanded');
+
+    const cfg = DRILLDOWN_CONFIG[panelId];
+    const nextCfg = cfg.next;
+    if (!nextCfg) return;
+
+    // Insert loading row
+    const drillTr = document.createElement('tr');
+    drillTr.className = 'drill-row';
+    const loadLabel = nextCfg.useBeaconDrill ? 'call payloads' : nextCfg.targetLabel.toLowerCase();
+    drillTr.innerHTML = `<td colspan="2">
+      <div class="drill-container" style="padding-left:16px;">
+        <div class="drill-header">
+          <i class="fa-solid fa-${nextCfg.useBeaconDrill ? 'scroll' : 'diagram-next'}"></i> ${nextCfg.targetLabel}
+          <span class="drill-breadcrumb" title="${esc(clickedValue)}"><i class="fa-solid fa-filter" style="font-size:9px;margin-right:3px;"></i>${esc(clickedValue.substring(0,50))}</span>
+        </div>
+        <div class="drill-loading"><i class="fa-solid fa-spinner spin"></i> Fetching ${loadLabel}…</div>
+      </div>
+    </td>`;
+    trEl.after(drillTr);
+
+    try {
+      const extraFilters = [
+        { tag: cfg.filterTag, key: cfg.filterKey, value: parentValue },
+        { tag: nextCfg.filterTag, key: nextCfg.filterKey, value: clickedValue },
+      ];
+      const container = drillTr.querySelector('.drill-container');
+
+      // ─── BEACON DRILL at level 2 ───
+      if (nextCfg.useBeaconDrill) {
+        const body = buildBeaconBody(extraFilters);
+        const res = await fetch(BEACON_ENDPOINT, {
+          method: 'POST',
+          headers: {
+            'Content-Type':  'application/json',
+            'authorization': `apiToken ${getToken()}`,
+          },
+          body: JSON.stringify(body),
+        });
+
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const result = await res.json();
+        const beacons = flattenBeacons(Array.isArray(result.items) ? result.items : (Array.isArray(result) ? result : []));
+        renderBeaconCards(beacons, container, nextCfg.targetLabel, clickedValue);
+        return;
+      }
+
+      // ─── GROUPED DRILL at level 2 ───
+      const body = buildDrillBody(nextCfg.targetGroupKey, extraFilters);
+      const res = await fetch(API_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'authorization': `apiToken ${getToken()}`,
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      const result = await res.json();
+      const items = (result.items || []).map(nextCfg.mapResult)
+        .filter(r => !EXCLUDED_KEYWORDS.some(kw => r.name.toLowerCase().includes(kw)))
+        .sort((a,b) => b.sessions - a.sessions);
+
+      if (items.length === 0) {
+        container.innerHTML = `
+          <div class="drill-header"><i class="fa-solid fa-diagram-next"></i> ${nextCfg.targetLabel}
+            <span class="drill-breadcrumb" title="${esc(clickedValue)}"><i class="fa-solid fa-filter" style="font-size:9px;margin-right:3px;"></i>${esc(clickedValue.substring(0,50))}</span>
+          </div>
+          <div class="drill-empty">No ${nextCfg.targetLabel.toLowerCase()} found.</div>`;
+        return;
+      }
+
+      const maxS = Math.max(...items.map(r => r.sessions), 1);
+      const subRows = items.map((item, idx) => {
+        const barW = Math.max(Math.round((item.sessions / maxS) * 100), 2);
+        return `<tr style="animation: fadeUp .2s ease ${idx * .02}s forwards; opacity:0;">
+          <td title="${esc(item.name)}">${esc(item.name)}</td>
+          <td><div class="bar-cell"><span class="td-count">${Number(item.sessions).toLocaleString()}</span><div class="bar" style="width:${barW}px;"></div></div></td>
+        </tr>`;
+      }).join('');
+
+      container.innerHTML = `
+        <div class="drill-header"><i class="fa-solid fa-diagram-next"></i> ${nextCfg.targetLabel}
+          <span class="drill-breadcrumb" title="${esc(clickedValue)}"><i class="fa-solid fa-filter" style="font-size:9px;margin-right:3px;"></i>${esc(clickedValue.substring(0,50))}</span>
+          <span style="margin-left:auto;font-size:10px;color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0;">${items.length} results</span>
+        </div>
+        <table class="drill-table">
+          <thead><tr>${nextCfg.targetColumns.map(c => `<th>${c}</th>`).join('')}</tr></thead>
+          <tbody>${subRows}</tbody>
+        </table>`;
+
+    } catch (err) {
+      const container = drillTr.querySelector('.drill-container');
+      container.innerHTML = `
+        <div class="drill-header"><i class="fa-solid fa-diagram-next"></i> ${nextCfg.targetLabel}</div>
+        <div class="drill-error"><i class="fa-solid fa-circle-xmark" style="margin-right:5px;"></i>${esc(err.message)}</div>`;
+    }
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     ── SESSION BROWSER ──
+     Fetches all beacons for a given session ID and displays
+     them as a chronological timeline.
+     ══════════════════════════════════════════════════════════ */
+
+  function browseSession(sessionId) {
+    // Populate the input and scroll to the session browser
+    const input = $('sessionIdInput');
+    input.value = sessionId;
+    const card = $('card-session');
+    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setTimeout(() => searchSession(), 300);
+  }
+
+  async function searchSession() {
+    const sessionId = $('sessionIdInput').value.trim();
+    if (!sessionId) return;
+    if (!getToken()) {
+      $('sessionResults').innerHTML = '<div class="drill-error"><i class="fa-solid fa-circle-xmark" style="margin-right:5px;"></i>API token is empty.</div>';
+      return;
+    }
+
+    setBadge('session', 'running', 'Loading…');
+    $('sessionSearchBtn').disabled = true;
+    $('sessionResults').innerHTML = `
+      <div style="padding:30px 20px;text-align:center;">
+        <i class="fa-solid fa-spinner spin" style="font-size:20px;color:var(--accentL);"></i>
+        <div style="margin-top:10px;font-size:12.5px;color:var(--text3);">Fetching all beacons for session <span style="font-family:var(--mono);color:var(--text2);">${esc(sessionId.substring(0,16))}…</span></div>
+      </div>`;
+
+    try {
+      const now = Date.now();
+      const body = {
+        tagFilterExpression: {
+          type: 'EXPRESSION',
+          logicalOperator: 'AND',
+          elements: [
+            { type:'TAG_FILTER', name:'beacon.website.name', operator:'EQUALS', entity:'NOT_APPLICABLE', value: getSite() },
+            { type:'TAG_FILTER', name:'beacon.sessionId', operator:'EQUALS', entity:'NOT_APPLICABLE', value: sessionId },
+          ],
+        },
+        type: 'CUSTOM',
+        timeFrame: { to: now, focusedMoment: now, autoRefresh: false, windowSize: 2592000000 }, // 30 day lookback
+        order: { by:'timestamp', direction:'ASC' },
+      };
+
+      const res = await fetch(BEACON_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'authorization': `apiToken ${getToken()}`,
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const txt = await res.text().catch(() => '');
+        throw new Error(`HTTP ${res.status} — ${txt.slice(0,200)}`);
+      }
+
+      const result = await res.json();
+      const rawBeacons = Array.isArray(result.items) ? result.items : (Array.isArray(result) ? result : []);
+      const beacons = flattenBeacons(rawBeacons);
+
+      if (beacons.length === 0) {
+        $('sessionResults').innerHTML = `
+          <div class="empty-state" style="padding:30px 20px;">
+            <div class="empty-icon">🔍</div>
+            <div class="empty-title">No beacons found</div>
+            <div class="empty-sub">No beacons found for session ID <code style="font-family:var(--mono);font-size:11px;background:rgba(0,0,0,.3);padding:1px 5px;border-radius:3px;">${esc(sessionId.substring(0,20))}</code>. Try a wider time window or check the ID.</div>
+          </div>`;
+        setBadge('session', 'done', '0 events');
+        $('sessionSearchBtn').disabled = false;
+        return;
+      }
+
+      renderSessionTimeline(beacons, sessionId);
+      setBadge('session', 'done', `${beacons.length} events`);
+
+      const foot = $('foot-session');
+      foot.style.display = 'block';
+      foot.innerHTML = `<i class="fa-solid fa-check-circle" style="color:var(--green);margin-right:5px;"></i>Session loaded: ${beacons.length} beacons &nbsp;·&nbsp; ${new Date().toLocaleString()}`;
+
+    } catch (err) {
+      $('sessionResults').innerHTML = `<div class="drill-error"><i class="fa-solid fa-circle-xmark" style="margin-right:5px;"></i>${esc(err.message)}</div>`;
+      setBadge('session', 'error', 'Error');
+    } finally {
+      $('sessionSearchBtn').disabled = false;
+    }
+  }
+
+  function renderSessionTimeline(beacons, sessionId) {
+    /* ── Format duration smartly ── */
+    function fmtDur(ms) {
+      if (ms == null) return '';
+      const n = Number(ms);
+      if (isNaN(n) || n <= 0) return '';
+      if (n < 1000) return `${n.toFixed(0)}ms`;
+      if (n < 60000) return `${(n / 1000).toFixed(2)}s`;
+      return `${(n / 60000).toFixed(1)}min`;
+    }
+
+    /* ── Classify + enrich each beacon ── */
+    const enriched = beacons.map(b => {
+      const evType = classifyBeaconType(b);
+      const dur = calcBeaconDuration(b);
+      const ts = b.timestamp || b.t || b.time || b.startTime || null;
+      const page = b.page || b.locationUrl || b.pageUrl || b.url || b.l || '';
+      const ceName = b.customEventName || b.ce || b.eventName || '';
+      const httpUrl = b.http_url || b.httpCallUrl || b.resourceUrl || '';
+      const httpMethod = b.http_method || b.method || '';
+      const httpStatus = b.http_status || b.httpStatus || b.status || b.statusCode || '';
+      const errorMsg = b.errorMessage || b.errorMsg || b.stackTrace || b.error || '';
+      const errorCount = b.errorCount || 0;
+      const platform = b.platform || b.os || b.device || '';
+      const backendTime = b.backendTime || b.t_resp || null;
+      const frontendTime = b.frontendTime || b.t_page || null;
+      const userAgent = b.userAgent || b.ua || '';
+      const meta = b.meta || {};
+      return { evType, dur, ts, page, ceName, httpUrl, httpMethod, httpStatus, errorMsg, errorCount, platform, backendTime, frontendTime, userAgent, meta, raw: b };
+    });
+
+    /* ── Stats ── */
+    const counts = { page: 0, xhr: 0, error: 0, resource: 0, custom: 0, other: 0 };
+    enriched.forEach(e => { counts[e.evType] = (counts[e.evType] || 0) + 1; });
+
+    const timestamps = enriched.map(e => e.ts).filter(Boolean).map(Number).filter(t => t > 0).sort((a, b) => a - b);
+    const sessionSpan = timestamps.length > 1 ? timestamps[timestamps.length - 1] - timestamps[0] : 0;
+
+    // Average duration per type
+    const durByType = {};
+    enriched.forEach(e => {
+      if (e.dur > 0) {
+        if (!durByType[e.evType]) durByType[e.evType] = [];
+        durByType[e.evType].push(e.dur);
+      }
+    });
+    const avgDurPage = durByType.page ? (durByType.page.reduce((a, b) => a + b, 0) / durByType.page.length) : null;
+    const avgDurXhr = durByType.xhr ? (durByType.xhr.reduce((a, b) => a + b, 0) / durByType.xhr.length) : null;
+
+    const firstPlatform = enriched.find(e => e.platform)?.platform || enriched.find(e => e.userAgent)?.userAgent?.substring(0, 60) || 'Unknown';
+
+    /* ── Unique pages visited ── */
+    const uniquePages = [...new Set(enriched.map(e => e.page).filter(Boolean))];
+
+    const summary = `
+      <div class="session-summary">
+        <div class="ss-item"><div class="ss-val">${beacons.length}</div><div class="ss-label">Total Events</div></div>
+        <div class="ss-item"><div class="ss-val" style="color:#34d399;">${counts.page}</div><div class="ss-label">Page Loads</div></div>
+        <div class="ss-item"><div class="ss-val" style="color:#fbbf24;">${counts.xhr}</div><div class="ss-label">XHR/Fetch</div></div>
+        <div class="ss-item"><div class="ss-val" style="color:#f87171;">${counts.error}</div><div class="ss-label">Errors</div></div>
+        <div class="ss-item"><div class="ss-val" style="color:#94a3b8;">${counts.resource + counts.custom + counts.other}</div><div class="ss-label">Other</div></div>
+        <div class="ss-item"><div class="ss-val" style="color:var(--accentL);">${fmtDur(sessionSpan) || '0s'}</div><div class="ss-label">Session Span</div></div>
+        ${avgDurPage ? `<div class="ss-item"><div class="ss-val" style="color:#34d399;">${fmtDur(avgDurPage)}</div><div class="ss-label">Avg Page Dur</div></div>` : ''}
+        ${avgDurXhr ? `<div class="ss-item"><div class="ss-val" style="color:#fbbf24;">${fmtDur(avgDurXhr)}</div><div class="ss-label">Avg XHR Dur</div></div>` : ''}
+      </div>
+      ${uniquePages.length > 0 ? `
+      <div style="margin-bottom:14px;padding:10px 12px;background:var(--bg4);border:1px solid var(--border);border-radius:6px;">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--text3);font-weight:600;margin-bottom:6px;">
+          <i class="fa-solid fa-sitemap" style="margin-right:4px;color:var(--accentL);"></i>Pages Visited (${uniquePages.length})
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;">
+          ${uniquePages.slice(0, 20).map(p => `<span style="font-family:var(--mono);font-size:10.5px;padding:3px 8px;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.15);border-radius:4px;color:var(--text2);">${esc(p)}</span>`).join('')}
+          ${uniquePages.length > 20 ? `<span style="font-size:10px;color:var(--text3);padding:3px 6px;">+${uniquePages.length - 20} more</span>` : ''}
+        </div>
+      </div>` : ''}`;
+
+    const getTypeBadge = (type) => {
+      const map = {
+        page:     { label: 'Page Load', color: '#34d399', bg: 'rgba(16,185,129,.1)' },
+        xhr:      { label: 'XHR/Fetch', color: '#fbbf24', bg: 'rgba(245,158,11,.1)' },
+        error:    { label: 'Error',     color: '#f87171', bg: 'rgba(239,68,68,.12)' },
+        resource: { label: 'Resource',  color: '#94a3b8', bg: 'rgba(148,163,184,.08)' },
+        custom:   { label: 'Custom',    color: '#818cf8', bg: 'rgba(99,102,241,.1)' },
+        other:    { label: 'Other',     color: '#64748b', bg: 'rgba(100,116,139,.08)' },
+      };
+      const m = map[type] || map.other;
+      return `<span class="ev-type-badge" style="background:${m.bg};color:${m.color};">${m.label}</span>`;
+    };
+
+    const events = enriched.map((n, idx) => {
+      const tsStr = n.ts ? new Date(Number(n.ts)).toLocaleString() : '';
+      const durStr = fmtDur(n.dur);
+
+      // Build rich detail line based on event type
+      let detailParts = [];
+
+      // Page path — always prominent
+      if (n.page) detailParts.push(`<span class="ev-detail" style="color:var(--text);font-weight:500;"><i class="fa-solid fa-file" style="color:#34d399;"></i>${esc(n.page)}</span>`);
+
+      // Custom event name
+      if (n.ceName) detailParts.push(`<span class="ev-detail" style="color:#c4b5fd;"><i class="fa-solid fa-bolt"></i>${esc(n.ceName)}</span>`);
+
+      // HTTP URL (for XHR/fetch)
+      if (n.httpUrl) detailParts.push(`<span class="ev-detail" style="color:#fde68a;"><i class="fa-solid fa-globe"></i>${esc(n.httpUrl.substring(0, 80))}</span>`);
+
+      // Method + Status (for XHR)
+      if (n.httpMethod) detailParts.push(`<span class="ev-detail"><i class="fa-solid fa-arrow-right"></i>${esc(n.httpMethod.toUpperCase())}</span>`);
+      if (n.httpStatus) detailParts.push(`<span class="ev-detail" style="color:${Number(n.httpStatus) >= 400 ? '#f87171' : '#34d399'};"><i class="fa-solid fa-signal"></i>${esc(String(n.httpStatus))}</span>`);
+
+      // Duration
+      if (durStr) detailParts.push(`<span class="ev-detail" style="color:var(--accentL);"><i class="fa-solid fa-stopwatch"></i>${durStr}</span>`);
+
+      // Backend / Frontend breakdown
+      if (n.backendTime && n.frontendTime) {
+        detailParts.push(`<span class="ev-detail" style="color:#fb923c;"><i class="fa-solid fa-server"></i>BE:${fmtDur(n.backendTime)}</span>`);
+        detailParts.push(`<span class="ev-detail" style="color:#38bdf8;"><i class="fa-solid fa-display"></i>FE:${fmtDur(n.frontendTime)}</span>`);
+      }
+
+      // Error message
+      if (n.errorMsg) detailParts.push(`<span class="ev-detail" style="color:#f87171;max-width:100%;"><i class="fa-solid fa-bug"></i>${esc(n.errorMsg.substring(0, 150))}</span>`);
+
+      // Error count
+      if (n.errorCount > 0) detailParts.push(`<span class="ev-detail" style="color:#f87171;"><i class="fa-solid fa-circle-exclamation"></i>${n.errorCount} error(s)</span>`);
+
+      // Full payload toggle
+      const skipPayloadKeys = new Set(['_hasBeaconWrapper', '_type', '_duration']);
+      const renderPayload = (obj, depth = 0) => {
+        return Object.entries(obj)
+          .filter(([k, v]) => v != null && v !== '' && !skipPayloadKeys.has(k))
+          .map(([k, v]) => {
+            if (typeof v === 'object' && !Array.isArray(v)) {
+              return `<div style="margin-left:${depth * 10}px;margin-top:2px;"><span class="bp-key">${esc(k)}</span>: {${renderPayload(v, depth + 1)}}</div>`;
+            }
+            const val = Array.isArray(v) ? JSON.stringify(v) : String(v);
+            return `<div style="margin-left:${depth * 10}px;"><span class="bp-key">${esc(k)}</span>=<span class="bp-str">${esc(val)}</span></div>`;
+          }).join('');
+      };
+
+      const isError = n.evType === 'error';
+      const fieldCount = Object.keys(n.raw).filter(k => !skipPayloadKeys.has(k) && n.raw[k] != null && n.raw[k] !== '').length;
+      const fullPayload = renderPayload(n.raw);
+
+      return `<div class="session-event ev-${n.evType}" style="animation-delay:${Math.min(idx * .02, .5)}s">
+        <div class="ev-header">
+          <span class="ev-time">${tsStr || '<span style="opacity:.4;">no timestamp</span>'}</span>
+          ${getTypeBadge(n.evType)}
+          ${durStr ? `<span style="font-family:var(--mono);font-size:10.5px;color:var(--accentL);margin-left:auto;">${durStr}</span>` : ''}
+        </div>
+        ${detailParts.length ? `<div class="ev-details">${detailParts.join('')}</div>` : ''}
+        <div class="ev-payload-section${isError ? ' open' : ''}">
+          <div class="ev-payload-toggle" onclick="this.parentElement.classList.toggle('open')">
+            <i class="fa-solid fa-chevron-right"></i>
+            <span>Full Payload (${fieldCount} fields)</span>
+          </div>
+          <div class="ev-payload-body">
+            ${fullPayload}
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+
+    $('sessionResults').innerHTML = `
+      <div style="margin-bottom:12px;">
+        <div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-bottom:4px;">
+          <i class="fa-solid fa-fingerprint" style="margin-right:4px;"></i>Session: <span style="color:var(--text2);">${esc(sessionId)}</span>
+        </div>
+        <div style="font-size:11px;color:var(--text3);">
+          <i class="fa-solid fa-mobile" style="margin-right:4px;"></i>Platform: <span style="color:var(--text2);">${esc(String(firstPlatform).substring(0, 80))}</span>
+        </div>
+      </div>
+      ${summary}
+      <div style="font-size:11px;color:var(--text3);margin-bottom:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">
+        <i class="fa-solid fa-timeline" style="margin-right:5px;color:var(--accentL);"></i>Session Timeline (${beacons.length} events)
+      </div>
+      <div class="session-timeline">
+        ${events}
+      </div>`;
+  }
+
+  // Allow Enter key to trigger search
+  document.addEventListener('DOMContentLoaded', () => {
+    const input = $('sessionIdInput');
+    if (input) {
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') searchSession();
+      });
+    }
+  });
+
+  /* ── Auto-refresh ── */
+  function setupAutoRefresh() {
+    clearInterval(autoTimer);
+    const ms = parseInt($('autoRefresh').value);
+    if (ms > 0) autoTimer = setInterval(runAll, ms);
+  }
+
+  /* ── Init: hide settings by default on small screens ── */
+  if (window.innerWidth < 900) {
+    const p = $('settingsPanel');
+    if (p) p.style.display = 'none';
+  }
+</script>
+</body>
+</html>
+
+
