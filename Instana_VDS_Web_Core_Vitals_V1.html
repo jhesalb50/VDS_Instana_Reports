@@ -1,0 +1,1844 @@
+<!DOCTYPE html><html lang="en"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Core Vitals Dashboard Overview</title>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --instana-blue: #1d3557;
+            --instana-dark: #0d1b2a;
+            --instana-accent: #457b9d;
+            --instana-light-blue: #a8dadc;
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8f9fa;
+            --bg-tertiary: #e9ecef;
+            --text-primary: #1a1a2e;
+            --text-secondary: #495057;
+            --text-muted: #6c757d;
+            --border-color: #dee2e6;
+            --card-bg: #ffffff;
+            --card-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            --good: #0f9d58;
+            --good-bg: #e6f4ea;
+            --good-bar: #34a853;
+            --needs-improvement: #f9a825;
+            --needs-improvement-bg: #fef7e0;
+            --needs-improvement-bar: #fbbc04;
+            --poor: #d93025;
+            --poor-bg: #fce8e6;
+            --poor-bar: #ea4335;
+            --header-bg: #1b2838;
+            --header-text: #ffffff;
+            --input-bg: #ffffff;
+            --input-border: #ced4da;
+        }
+
+        .dark {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --text-muted: #6e7681;
+            --border-color: #30363d;
+            --card-bg: #161b22;
+            --card-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            --header-bg: #010409;
+            --header-text: #e6edf3;
+            --input-bg: #0d1117;
+            --input-border: #30363d;
+            --good-bg: #0f9d5820;
+            --needs-improvement-bg: #f9a82520;
+            --poor-bg: #d9302520;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--header-bg) 0%, var(--instana-blue) 100%);
+            color: var(--header-text);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
+            border-bottom: 3px solid var(--instana-accent);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-logo {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #73c8f5, #4aa3df);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            letter-spacing: -0.3px;
+        }
+
+        .header-subtitle {
+            font-size: 12px;
+            opacity: 0.7;
+            font-weight: 300;
+        }
+
+        .config-panel {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin: 16px 20px;
+            display: flex;
+            align-items: flex-end;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .config-field {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .config-field label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+        }
+
+        .config-field input, .config-field select {
+            padding: 8px 12px;
+            border: 1px solid var(--input-border);
+            border-radius: 5px;
+            font-size: 13px;
+            font-family: 'IBM Plex Mono', monospace;
+            background: var(--input-bg);
+            color: var(--text-primary);
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .config-field input:focus, .config-field select:focus {
+            border-color: var(--instana-accent);
+        }
+
+        .fetch-btn {
+            padding: 8px 20px;
+            background: linear-gradient(135deg, var(--instana-accent), var(--instana-blue));
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+            height: 35px;
+        }
+
+        .fetch-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(69, 123, 157, 0.4);
+        }
+
+        .fetch-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .fetch-btn i {
+            margin-right: 6px;
+        }
+
+        .status-bar {
+            padding: 8px 20px;
+            font-size: 12px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-bar.error {
+            color: var(--poor);
+            background: var(--poor-bg);
+            margin: 0 20px;
+            border-radius: 6px;
+            padding: 10px 16px;
+        }
+
+        .status-bar.success {
+            color: var(--good);
+        }
+
+        .status-bar .spinner {
+            width: 14px;
+            height: 14px;
+            border: 2px solid var(--border-color);
+            border-top-color: var(--instana-accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .dashboard-container {
+            padding: 0 20px 20px;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 20px 0 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--instana-accent);
+            display: inline-block;
+        }
+
+        .timestamp {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--card-shadow);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        thead {
+            background: var(--instana-blue);
+            color: white;
+        }
+
+        thead th {
+            padding: 10px 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            border-right: 1px solid rgba(255,255,255,0.1);
+        }
+
+        thead th:last-child {
+            border-right: none;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid var(--border-color);
+            transition: background 0.15s;
+        }
+
+        tbody tr:hover {
+            background: var(--bg-secondary);
+        }
+
+        tbody tr:nth-child(even) {
+            background: var(--bg-secondary);
+        }
+
+        tbody tr:nth-child(even):hover {
+            background: var(--bg-tertiary);
+        }
+
+        tbody td {
+            padding: 8px 12px;
+            vertical-align: middle;
+            border-right: 1px solid var(--border-color);
+        }
+
+        tbody td:last-child {
+            border-right: none;
+        }
+
+        .page-type {
+            font-weight: 500;
+            color: var(--text-primary);
+            max-width: 200px;
+        }
+
+        .score-cell {
+            font-family: 'IBM Plex Mono', monospace;
+            font-weight: 500;
+            font-size: 13px;
+            text-align: center;
+        }
+
+        .passing-cell {
+            min-width: 80px;
+        }
+
+        .passing-bar {
+            height: 22px;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 600;
+            color: white;
+            min-width: 50px;
+            padding: 0 6px;
+        }
+
+        .score-good { color: var(--good); }
+        .score-needs-improvement { color: var(--needs-improvement); }
+        .score-poor { color: var(--poor); }
+
+        .bar-good { background: var(--good-bar); }
+        .bar-needs-improvement { background: var(--needs-improvement-bar); }
+        .bar-poor { background: var(--poor-bar); }
+
+        .overall-status {
+            text-align: center;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .badge-good {
+            background: var(--good-bg);
+            color: var(--good);
+        }
+
+        .badge-needs-improvement {
+            background: var(--needs-improvement-bg);
+            color: var(--needs-improvement);
+        }
+
+        .badge-poor {
+            background: var(--poor-bg);
+            color: var(--poor);
+        }
+
+        .specs-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .specs-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+        }
+
+        .specs-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .specs-table th,
+        .specs-table td {
+            padding: 10px 14px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 13px;
+        }
+
+        .specs-table thead th {
+            background: var(--bg-secondary);
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            color: var(--text-secondary);
+        }
+
+        .specs-table .metric-name {
+            font-weight: 600;
+            color: var(--instana-blue);
+        }
+
+        .dark .specs-table .metric-name {
+            color: var(--instana-light-blue);
+        }
+
+        .specs-table .metric-desc {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .threshold-good {
+            color: var(--good);
+            font-weight: 500;
+            font-family: 'IBM Plex Mono', monospace;
+        }
+
+        .threshold-needs {
+            color: var(--needs-improvement);
+            font-weight: 500;
+            font-family: 'IBM Plex Mono', monospace;
+        }
+
+        .threshold-poor {
+            color: var(--poor);
+            font-weight: 500;
+            font-family: 'IBM Plex Mono', monospace;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.4;
+        }
+
+        .empty-state h3 {
+            font-size: 16px;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state p {
+            font-size: 13px;
+        }
+
+        .warning-banner {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 6px;
+            padding: 10px 16px;
+            margin: 12px 20px;
+            font-size: 12px;
+            color: #856404;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .dark .warning-banner {
+            background: #332b00;
+            border-color: #665500;
+            color: #ffcc02;
+        }
+
+        .references {
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border-color);
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .references a {
+            color: var(--instana-accent);
+            text-decoration: none;
+        }
+
+        .references a:hover {
+            text-decoration: underline;
+        }
+
+        .advanced-toggle {
+            margin: 0 20px 12px;
+            font-size: 12px;
+            color: var(--instana-accent);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            user-select: none;
+        }
+
+        .advanced-toggle:hover { text-decoration: underline; }
+
+        .connection-toggle {
+            margin: 0 20px 0;
+            font-size: 12px;
+            color: var(--instana-accent);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            user-select: none;
+        }
+
+        .connection-toggle:hover { text-decoration: underline; }
+
+        .connection-panel-wrapper {
+            overflow: hidden;
+            transition: max-height 0.3s ease, opacity 0.3s ease;
+            max-height: 200px;
+            opacity: 1;
+        }
+
+        .connection-panel-wrapper.hidden {
+            max-height: 0;
+            opacity: 0;
+        }
+
+        .advanced-panel {
+            display: none;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin: 0 20px 16px;
+        }
+
+        .advanced-panel.open { display: block; }
+
+        .advanced-section {
+            margin-bottom: 14px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .advanced-section:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+
+        .advanced-section-title {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--instana-accent);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .advanced-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 8px;
+        }
+
+        .advanced-row:last-child { margin-bottom: 0; }
+
+        .advanced-row label { font-size: 12px; color: var(--text-secondary); white-space: nowrap; }
+
+        .advanced-row input, .advanced-row select {
+            padding: 6px 10px;
+            border: 1px solid var(--input-border);
+            border-radius: 4px;
+            font-size: 13px;
+            background: var(--input-bg);
+            color: var(--text-primary);
+            font-family: 'IBM Plex Mono', monospace;
+        }
+
+        .toggle-switch {
+            position: relative; width: 40px; height: 22px;
+            background: var(--border-color); border-radius: 11px;
+            cursor: pointer; transition: background 0.3s; flex-shrink: 0;
+        }
+
+        .toggle-switch.active { background: var(--good); }
+
+        .toggle-switch::after {
+            content: ''; position: absolute; top: 3px; left: 3px;
+            width: 16px; height: 16px; background: white;
+            border-radius: 50%; transition: transform 0.3s;
+        }
+
+        .toggle-switch.active::after { transform: translateX(18px); }
+
+        .polling-indicator {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;
+            background: var(--bg-tertiary); color: var(--text-muted);
+        }
+
+        .polling-indicator.active { background: var(--good-bg); color: var(--good); }
+
+        .polling-indicator .pulse {
+            width: 8px; height: 8px; background: var(--good);
+            border-radius: 50%; animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+        .notification-toast {
+            position: fixed; top: 20px; right: 20px; z-index: 9999;
+            background: var(--poor); color: white; padding: 12px 20px;
+            border-radius: 8px; font-size: 13px; font-weight: 500;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3); animation: slideIn 0.3s ease-out; max-width: 400px;
+        }
+
+        .notification-toast.success { background: var(--good); }
+
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        .no-data-row td { text-align: center; padding: 30px; color: var(--text-muted); font-style: italic; }
+
+        .alert-log {
+            max-height: 120px; overflow-y: auto; margin-top: 10px;
+            border: 1px solid var(--border-color); border-radius: 6px;
+            font-size: 11px; font-family: 'IBM Plex Mono', monospace;
+        }
+
+        .alert-log-entry { padding: 5px 10px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 8px; }
+        .alert-log-entry:last-child { border-bottom: none; }
+        .alert-log-entry .alert-time { color: var(--text-muted); white-space: nowrap; }
+        .alert-log-entry .alert-msg { color: var(--poor); }
+
+        @media (max-width: 768px) {
+            .header { padding: 12px 16px; }
+            .header h1 { font-size: 15px; }
+            .config-panel { margin: 12px; padding: 12px; flex-direction: column; align-items: stretch; }
+            .config-field { min-width: unset; }
+            .fetch-btn { width: 100%; }
+            .dashboard-container { padding: 0 12px 12px; }
+            .table-wrapper { font-size: 12px; }
+            thead th, tbody td { padding: 6px 8px; }
+            .specs-section { padding: 12px; }
+            .advanced-panel { margin: 0 12px 12px; padding: 12px; }
+            .advanced-toggle { margin: 0 12px 12px; }
+            .advanced-row { flex-direction: column; align-items: flex-start; }
+        }
+
+        .fade-in { animation: fadeIn 0.3s ease-out; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <div class="header-logo"><i class="fas fa-chart-line" style="font-size:14px"></i></div>
+            <div>
+                <h1>Web Core Vitals Dashboard Overview</h1>
+                <div class="header-subtitle">VDS Website Performance Monitoring</div>
+            </div>
+        </div>
+        <span id="pollingStatus" class="polling-indicator"><span>OFF</span></span>
+    </div>
+
+    <div class="warning-banner">
+        <i class="fas fa-exclamation-triangle"></i>
+        <span><strong>Security Notice:</strong> API key is embedded in client-side code. Rotate this key if sharing this app publicly.</span>
+    </div>
+
+    <div style="display:flex; align-items:center; justify-content:space-between; margin:16px 20px 4px;">
+        <span class="connection-toggle" onclick="toggleConnectionPanel()">
+            <i class="fas fa-plug" id="connToggleIcon"></i>
+            <span id="connToggleText">Hide Connection</span>
+        </span>
+    </div>
+
+    <div class="connection-panel-wrapper" id="connectionPanelWrapper">
+    <div class="config-panel">
+        <div class="config-field" style="flex:2">
+            <label>Instana Base URL</label>
+            <input type="text" id="instanaUrl" placeholder="https://your-tenant.instana.io" value="https://prod-vodacomsa.instana.io">
+        </div>
+        <div class="config-field" style="flex:1.5">
+            <label>API Token</label>
+            <input type="password" id="apiToken" value="uaOE1RF3Q5qCl02buKlsdg">
+        </div>
+        <div class="config-field" style="flex:1">
+            <label>Website Name</label>
+            <input type="text" id="websiteName" placeholder="VDS" value="VDS">
+        </div>
+        <div class="config-field" style="flex:0.8">
+            <label>Time Range</label>
+            <select id="timeRange">
+                <option value="3600000">Last 1 hour</option>
+                <option value="21600000">Last 6 hours</option>
+                <option value="86400000">Last 24 hours</option>
+                <option value="604800000" selected="">Last 7 days</option>
+                <option value="2592000000">Last 30 days</option>
+            </select>
+        </div>
+        <button class="fetch-btn" id="fetchBtn" onclick="fetchData()">
+            <i class="fas fa-sync-alt"></i> Fetch Data
+        </button>
+    </div>
+    </div><!-- end connection-panel-wrapper -->
+
+    <div class="advanced-toggle" onclick="toggleAdvanced()">
+        <i class="fas fa-cog"></i> <span id="advancedToggleText">Show Advanced Settings</span>
+    </div>
+
+    <div class="advanced-panel" id="advancedPanel">
+        <div class="advanced-section">
+            <div class="advanced-section-title"><i class="fas fa-clock"></i> Auto-Polling</div>
+            <div class="advanced-row">
+                <div class="toggle-switch" id="pollingToggle" onclick="togglePolling()"></div>
+                <label>Interval:</label>
+                <select id="pollingInterval" onchange="restartPolling()">
+                    <option value="60000">1 minute</option>
+                    <option value="300000" selected="">5 minutes</option>
+                    <option value="900000">15 minutes</option>
+                    <option value="1800000">30 minutes</option>
+                    <option value="3600000">1 hour</option>
+                </select>
+                <span id="nextPollTime" style="font-size:11px; color:var(--text-muted);"></span>
+            </div>
+        </div>
+
+        <div class="advanced-section">
+            <div class="advanced-section-title"><i class="fas fa-bell"></i> Threshold Alerting</div>
+            <div class="advanced-row">
+                <div class="toggle-switch" id="alertToggle" onclick="toggleAlerts()"></div>
+                <label>Alert when any metric is:</label>
+                <select id="alertThreshold">
+                    <option value="poor" selected="">Poor</option>
+                    <option value="needs-improvement">Needs Improvement or Poor</option>
+                </select>
+            </div>
+            <div id="alertLog" class="alert-log" style="display:none;"></div>
+        </div>
+
+        <div class="advanced-section">
+            <div class="advanced-section-title"><i class="fas fa-search"></i> Discover URLs</div>
+            <div class="advanced-row">
+                <button class="fetch-btn" id="discoverBtn" onclick="discoverUrls()" style="background:linear-gradient(135deg,#6c757d,#495057)">
+                    <i class="fas fa-search"></i> Discover All Pages
+                </button>
+                <span style="font-size:11px; color:var(--text-muted);">View raw page names and their category mapping</span>
+            </div>
+        </div>
+
+        <div class="advanced-section">
+            <div class="advanced-section-title"><i class="fas fa-vial"></i> Diagnose Beacon Count</div>
+            <div class="advanced-row">
+                <input type="text" id="diagnosePageName" value="/shop/checkout" placeholder="Exact page name to test" style="flex:1; min-width:200px; padding:8px 10px; background:var(--input-bg); border:1px solid var(--input-border); border-radius:6px; color:var(--text-primary); font-size:13px;">
+                <button class="fetch-btn" id="diagnoseBtn" onclick="diagnoseBeaconCount()" style="background:linear-gradient(135deg,#6c757d,#495057)">
+                    <i class="fas fa-vial"></i> Run Diagnostic
+                </button>
+                <span style="font-size:11px; color:var(--text-muted);">Queries beaconCount alone (no LCP/INP/CLS) for one exact page name, same time window. Compare the result to the value in the combined query and to Instana's Pages tab.</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="statusBar" class="status-bar" style="display:none"></div>
+
+    <div id="urlDiscoveryPanel" style="display:none; margin:0 20px 16px; padding:16px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:8px; max-height:500px; overflow-y:auto;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <h3 style="font-size:14px; font-weight:600; color:var(--text-primary);"><i class="fas fa-list"></i> All Pages from Instana</h3>
+            <button onclick="document.getElementById('urlDiscoveryPanel').style.display='none'" style="background:none; border:none; cursor:pointer; color:var(--text-muted); font-size:16px;">✕</button>
+        </div>
+        <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">These are the actual page names returned by the API. Use this to map them to page categories.</p>
+        <div id="urlDiscoveryContent"></div>
+    </div>
+
+    <div class="dashboard-container">
+        <div class="section-title">Page Performance Overview</div>
+        <div id="timestamp" class="timestamp"></div>
+
+        <div class="table-wrapper" id="tableWrapper">
+            <div class="empty-state">
+                <i class="fas fa-tachometer-alt"></i>
+                <h3>No Data Loaded</h3>
+                <p>Enter your Instana base URL above and click "Fetch Data" to load Core Web Vitals metrics.</p>
+            </div>
+        </div>
+
+        <div class="specs-section">
+            <div class="specs-title">Performance Specifications</div>
+            <div class="table-wrapper" style="border:none;box-shadow:none;">
+                <table class="specs-table">
+                    <thead>
+                        <tr>
+                            <th>Metric</th>
+                            <th>What it measures</th>
+                            <th style="text-align:center"><span class="threshold-good">Good</span></th>
+                            <th style="text-align:center"><span class="threshold-needs">Needs Improvement</span></th>
+                            <th style="text-align:center"><span class="threshold-poor">Poor</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <div class="metric-name">LCP</div>
+                            </td>
+                            <td>
+                                Largest Contentful Paint measures loading performance / perceived load speed
+                                <div class="metric-desc">Time until the largest content element is rendered</div>
+                            </td>
+                            <td style="text-align:center"><span class="threshold-good">&lt; 2.5 seconds</span></td>
+                            <td style="text-align:center"><span class="threshold-needs">&gt; 2.5 and &lt; 4.0 seconds</span></td>
+                            <td style="text-align:center"><span class="threshold-poor">&gt; 4.0 seconds</span></td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="metric-name">INP</div>
+                            </td>
+                            <td>
+                                Interaction to Next Paint measures page responsiveness after user input
+                                <div class="metric-desc">Latency of user interactions throughout the page lifecycle</div>
+                            </td>
+                            <td style="text-align:center"><span class="threshold-good">&lt; 200 milliseconds</span></td>
+                            <td style="text-align:center"><span class="threshold-needs">&gt; 200 and &lt; 500 milliseconds</span></td>
+                            <td style="text-align:center"><span class="threshold-poor">&gt; 500 milliseconds</span></td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="metric-name">CLS</div>
+                            </td>
+                            <td>
+                                Cumulative Layout Shift measures unexpected visual movement / visual stability
+                                <div class="metric-desc">Sum of all individual layout shift scores</div>
+                            </td>
+                            <td style="text-align:center"><span class="threshold-good">&lt; 0.1</span></td>
+                            <td style="text-align:center"><span class="threshold-needs">&gt; 0.1 and &lt; 0.25</span></td>
+                            <td style="text-align:center"><span class="threshold-poor">&gt; 0.25</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="references">
+                <strong>References:</strong>
+                <a href="https://web.dev/vitals/" target="_blank">Google Web Vitals overview</a>,
+                <a href="https://web.dev/lcp/" target="_blank">Largest Contentful Paint</a>,
+                <a href="https://web.dev/inp/" target="_blank">Interaction to Next Paint</a>,
+                <a href="https://web.dev/cls/" target="_blank">Cumulative Layout Shift</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Dark mode detection
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            if (event.matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        });
+
+        // Thresholds
+        const THRESHOLDS = {
+            lcp: { good: 2500, poor: 4000 },   // milliseconds
+            inp: { good: 200, poor: 500 },      // milliseconds
+            cls: { good: 0.1, poor: 0.25 }      // unitless
+        };
+
+        function getStatus(metric, value) {
+            if (value === null || value === undefined) return 'no-data';
+            const t = THRESHOLDS[metric];
+            if (value <= t.good) return 'good';
+            if (value < t.poor) return 'needs-improvement';
+            return 'poor';
+        }
+
+        function getOverallStatus(lcpStatus, inpStatus, clsStatus) {
+            const statuses = [lcpStatus, inpStatus, clsStatus];
+            if (statuses.includes('poor')) return 'poor';
+            if (statuses.includes('needs-improvement')) return 'needs-improvement';
+            if (statuses.every(s => s === 'good')) return 'good';
+            return 'needs-improvement';
+        }
+
+        function formatScore(metric, value) {
+            if (value === null || value === undefined) return '\u2014';
+            if (metric === 'lcp') return (value / 1000).toFixed(1);
+            if (metric === 'inp') return Math.round(value).toString();
+            if (metric === 'cls') return value.toFixed(2);
+            return value;
+        }
+
+        function getPassingPercentage(metric, values) {
+            if (!values || values.length === 0) return null;
+            const t = THRESHOLDS[metric];
+            const passing = values.filter(v => v <= t.good).length;
+            return Math.round((passing / values.length) * 100);
+        }
+
+        function showStatus(message, type) {
+            const bar = document.getElementById('statusBar');
+            bar.style.display = 'flex';
+            bar.className = 'status-bar ' + (type || '');
+            if (type === 'loading') {
+                bar.innerHTML = '<div class="spinner"></div> ' + message;
+            } else {
+                bar.innerHTML = (type === 'error' ? '<i class="fas fa-exclamation-circle"></i> ' : '<i class="fas fa-check-circle"></i> ') + message;
+            }
+        }
+
+        function hideStatus() {
+            document.getElementById('statusBar').style.display = 'none';
+        }
+
+        // Known metric name variants for LCP and INP across Instana versions
+        const LCP_CANDIDATES = [
+            'largestContentfulPaintTime',
+            'largestContentfulPaint',
+            'webVitalsLargestContentfulPaint',
+            'pageLoadLargestContentfulPaint',
+            'lcp',
+            'largest_contentful_paint'
+        ];
+        const INP_CANDIDATES = [
+            'interactionNextPaint',
+            'interactionToNextPaint',
+            'webVitalsInteractionToNextPaint',
+            'inp',
+            'interaction_to_next_paint',
+            'firstInputDelay'
+        ];
+        const CLS_CANDIDATES = [
+            'cumulativeLayoutShift',
+            'webVitalsCumulativeLayoutShift',
+            'cls',
+            'cumulative_layout_shift'
+        ];
+
+        // Store resolved metric names
+        let resolvedMetrics = {
+            lcp: null,
+            inp: null,
+            cls: 'cumulativeLayoutShift' // This one works
+        };
+
+        async function discoverMetrics(baseUrl, token) {
+            // Try the catalog endpoint to find available metric names
+            try {
+                const catalogRes = await fetch(baseUrl + '/api/website-monitoring/catalog/metrics', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': 'apiToken ' + token
+                    }
+                });
+
+                if (catalogRes.ok) {
+                    const catalog = await catalogRes.json();
+                    const metricNames = [];
+
+                    // Catalog might be an array of objects or a flat list
+                    if (Array.isArray(catalog)) {
+                        catalog.forEach(m => {
+                            if (m.metricId) metricNames.push(m.metricId);
+                            else if (m.key) metricNames.push(m.key);
+                            else if (m.name) metricNames.push(m.name);
+                            else if (typeof m === 'string') metricNames.push(m);
+                        });
+                    }
+
+                    console.log('Available metrics: ' + JSON.stringify(metricNames.filter(n =>
+                        n.toLowerCase().includes('lcp') ||
+                        n.toLowerCase().includes('largest') ||
+                        n.toLowerCase().includes('inp') ||
+                        n.toLowerCase().includes('interaction') ||
+                        n.toLowerCase().includes('first') ||
+                        n.toLowerCase().includes('cls') ||
+                        n.toLowerCase().includes('cumulative') ||
+                        n.toLowerCase().includes('layout') ||
+                        n.toLowerCase().includes('contentful') ||
+                        n.toLowerCase().includes('vital')
+                    )));
+
+                    // Match LCP
+                    for (const candidate of LCP_CANDIDATES) {
+                        if (metricNames.some(n => n === candidate || n.toLowerCase() === candidate.toLowerCase())) {
+                            resolvedMetrics.lcp = metricNames.find(n => n.toLowerCase() === candidate.toLowerCase()) || candidate;
+                            break;
+                        }
+                    }
+
+                    // Match INP
+                    for (const candidate of INP_CANDIDATES) {
+                        if (metricNames.some(n => n === candidate || n.toLowerCase() === candidate.toLowerCase())) {
+                            resolvedMetrics.inp = metricNames.find(n => n.toLowerCase() === candidate.toLowerCase()) || candidate;
+                            break;
+                        }
+                    }
+
+                    // Match CLS (in case naming is different)
+                    for (const candidate of CLS_CANDIDATES) {
+                        if (metricNames.some(n => n === candidate || n.toLowerCase() === candidate.toLowerCase())) {
+                            resolvedMetrics.cls = metricNames.find(n => n.toLowerCase() === candidate.toLowerCase()) || candidate;
+                            break;
+                        }
+                    }
+
+                    return metricNames;
+                }
+            } catch (e) {
+                console.log('Catalog fetch failed: ' + JSON.stringify(e.message));
+            }
+            return null;
+        }
+
+        async function probeMetricName(baseUrl, token, candidates, timeRange) {
+            // Try each candidate with a small beacon-groups query
+            for (const candidate of candidates) {
+                try {
+                    const testBody = {
+                        type: 'PAGELOAD',
+                        timeFrame: { windowSize: timeRange, to: Date.now() },
+                        metrics: [
+                            { metric: candidate, aggregation: 'P75' }
+                        ],
+                        pagination: { page: 1, pageSize: 1 }
+                    };
+
+                    const res = await fetch(baseUrl + '/api/website-monitoring/analyze/beacon-groups', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': 'apiToken ' + token,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(testBody)
+                    });
+
+                    if (res.ok) {
+                        return candidate;
+                    }
+                } catch (e) {
+                    // continue to next candidate
+                }
+            }
+            return null;
+        }
+
+        async function fetchData() {
+            const baseUrl = document.getElementById('instanaUrl').value.trim().replace(/\/$/, '');
+            const token = document.getElementById('apiToken').value.trim();
+            const websiteName = document.getElementById('websiteName').value.trim();
+            const timeRange = parseInt(document.getElementById('timeRange').value);
+
+            if (!baseUrl) {
+                showStatus('Please enter your Instana base URL (e.g., https://your-tenant.instana.io)', 'error');
+                return;
+            }
+            if (!token) {
+                showStatus('Please enter your API token', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('fetchBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Fetching...';
+            showStatus('Discovering available metrics from catalog...', 'loading');
+
+            try {
+                // Step 1: Discover metric names from catalog
+                const catalogMetrics = await discoverMetrics(baseUrl, token);
+
+                // Step 2: If catalog didn't resolve, probe each metric name
+                if (!resolvedMetrics.lcp) {
+                    showStatus('Probing LCP metric name...', 'loading');
+                    resolvedMetrics.lcp = await probeMetricName(baseUrl, token, LCP_CANDIDATES, timeRange);
+                }
+                if (!resolvedMetrics.inp) {
+                    showStatus('Probing INP metric name...', 'loading');
+                    resolvedMetrics.inp = await probeMetricName(baseUrl, token, INP_CANDIDATES, timeRange);
+                }
+
+                console.log('Resolved metrics: ' + JSON.stringify(resolvedMetrics));
+
+                // Step 3: Get website config
+                showStatus('Fetching website configuration...', 'loading');
+                let websiteId = null;
+                try {
+                    const websitesRes = await fetch(baseUrl + '/api/website-monitoring/config', {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': 'apiToken ' + token
+                        }
+                    });
+
+                    if (websitesRes.ok) {
+                        const websites = await websitesRes.json();
+                        if (Array.isArray(websites)) {
+                            const match = websites.find(w =>
+                                w.name && w.name.toLowerCase().includes(websiteName.toLowerCase())
+                            );
+                            if (match) {
+                                websiteId = match.id;
+                            }
+                        }
+                    }
+                } catch (e) {
+                    // Non-fatal, continue without website filter
+                }
+
+                showStatus('Fetching Core Web Vitals data...', 'loading');
+
+                // Step 4: Build metrics array with resolved names
+                const metricsArray = [];
+                if (resolvedMetrics.lcp) {
+                    metricsArray.push({ metric: resolvedMetrics.lcp, aggregation: 'P75' });
+                }
+                if (resolvedMetrics.cls) {
+                    metricsArray.push({ metric: resolvedMetrics.cls, aggregation: 'P75' });
+                }
+                if (resolvedMetrics.inp) {
+                    metricsArray.push({ metric: resolvedMetrics.inp, aggregation: 'P75' });
+                }
+                metricsArray.push({ metric: 'beaconCount', aggregation: 'SUM' });
+
+                if (metricsArray.length <= 1) {
+                    throw new Error('Could not resolve any Core Web Vitals metric names. Available catalog metrics logged to console.');
+                }
+
+                // Step 5: Fetch beacon groups
+                const requestBody = {
+                    type: 'PAGELOAD',
+                    timeFrame: {
+                        windowSize: timeRange,
+                        to: Date.now()
+                    },
+                    group: {
+                        groupbyTag: 'beacon.page.name',
+                        groupbyTagSecondLevelKey: ''
+                    },
+                    metrics: metricsArray,
+                    order: {
+                        by: 'beaconCount',
+                        direction: 'DESC'
+                    },
+                    pagination: {
+                        page: 1,
+                        pageSize: 50
+                    }
+                };
+
+                if (websiteId) {
+                    requestBody.tagFilterExpression = {
+                        type: 'TAG_FILTER',
+                        name: 'beacon.website.name',
+                        operator: 'EQUALS',
+                        entity: 'NOT_APPLICABLE',
+                        value: websiteName
+                    };
+                }
+
+                const metricsRes = await fetch(baseUrl + '/api/website-monitoring/analyze/beacon-groups', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'apiToken ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                if (!metricsRes.ok) {
+                    const errText = await metricsRes.text();
+                    throw new Error('API Error (' + metricsRes.status + '): ' + errText);
+                }
+
+                const metricsData = await metricsRes.json();
+                console.log('API response sample: ' + JSON.stringify(metricsData.items ? metricsData.items[0] : metricsData));
+                renderTable(metricsData);
+
+                const metricInfo = [];
+                if (resolvedMetrics.lcp) metricInfo.push('LCP=' + resolvedMetrics.lcp);
+                if (resolvedMetrics.inp) metricInfo.push('INP=' + resolvedMetrics.inp);
+                if (resolvedMetrics.cls) metricInfo.push('CLS=' + resolvedMetrics.cls);
+
+                showStatus('Data loaded \u2014 ' + (metricsData.items ? metricsData.items.length : 0) + ' page types found. Metrics: ' + metricInfo.join(', '), 'success');
+
+            } catch (err) {
+                showStatus(err.message, 'error');
+                console.log('Fetch error: ' + JSON.stringify(err.message));
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-sync-alt"></i> Fetch Data';
+            }
+        }
+
+        function unwrapValue(val) {
+            // Instana returns metrics as [[timestamp, value]] nested arrays
+            if (Array.isArray(val)) {
+                if (val.length > 0 && Array.isArray(val[0])) {
+                    // [[timestamp, value]] format
+                    return val[0].length > 1 ? val[0][1] : null;
+                }
+                // [value] format
+                return val.length > 0 ? val[0] : null;
+            }
+            return val;
+        }
+
+        function extractMetricValue(metrics, resolvedName) {
+            if (!metrics || !resolvedName) return null;
+
+            // Try exact key with .p75 suffix (primary Instana format)
+            const p75Key = resolvedName + '.p75';
+            if (metrics[p75Key] !== undefined && metrics[p75Key] !== null) {
+                return unwrapValue(metrics[p75Key]);
+            }
+
+            // Try with .sum suffix
+            const sumKey = resolvedName + '.sum';
+            if (metrics[sumKey] !== undefined && metrics[sumKey] !== null) {
+                return unwrapValue(metrics[sumKey]);
+            }
+
+            // Try exact key
+            if (metrics[resolvedName] !== undefined && metrics[resolvedName] !== null) {
+                return unwrapValue(metrics[resolvedName]);
+            }
+
+            // Try case-insensitive match on all keys
+            const lowerName = resolvedName.toLowerCase();
+            for (const key of Object.keys(metrics)) {
+                const keyBase = key.split('.')[0].toLowerCase();
+                if (keyBase === lowerName || keyBase.replace(/[._]/g, '') === lowerName.replace(/[._]/g, '')) {
+                    const val = metrics[key];
+                    if (val !== undefined && val !== null) {
+                        return unwrapValue(val);
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ========== PAGE CATEGORIZATION ==========
+        // Two layers, checked in order:
+        //   1. ALLOWED_PAGES  - exact literal names (colon-style / plain names)
+        //   2. Path-based rule - for /shop/... and /vb/... URLs, category is
+        //      "<VB >?<Segment> <- Contract>" e.g. /shop/deal-builder?...&contract=new
+        //      -> "Deal Builder - New", /vb/deal-builder -> "VB Deal Builder".
+        //      /shop/ and /vb/ are kept as separate categories on purpose.
+        // Anything matching neither is excluded — not counted toward any category.
+        const ALLOWED_PAGES = {
+            'home': 'Home',
+            'shopping:dealbuilder:choosedevice': 'Shopping Deal Builder - Choose Device',
+            'deal-builder': 'Deal Builder',
+            'deal-builder:landing': 'Deal Builder Landing',
+            'shopping:upgrade': 'Shopping Upgrade',
+            'shopping:upgrade:landing': 'Shopping Upgrade Landing',
+            'business:dealbuilder:choosedevice': 'Business Deal Builder - Choose Device'
+        };
+
+        function toTitleCase(str) {
+            return str
+                .split(/[\-_/]+/)
+                .filter(Boolean)
+                .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+                .join(' ');
+        }
+
+        const SHOP_PATH_PATTERN = /^\/(shop|vb)\/([^/?]+)/i;
+
+        function categorizeUrl(pageName) {
+            if (!pageName) return null;
+            const trimmed = pageName.trim();
+            const lower = trimmed.toLowerCase();
+
+            // 1. Exact literal match
+            if (Object.prototype.hasOwnProperty.call(ALLOWED_PAGES, lower)) {
+                return ALLOWED_PAGES[lower];
+            }
+
+            // 2. /shop/... or /vb/... path pattern, split by contract= query param
+            const pathMatch = trimmed.match(SHOP_PATH_PATTERN);
+            if (!pathMatch) return null;
+
+            const base = pathMatch[1].toLowerCase();       // 'shop' or 'vb'
+            const segment = pathMatch[2];                  // e.g. 'checkout', 'deal-builder'
+            const prefixLabel = base === 'vb' ? 'VB ' : '';
+            let category = prefixLabel + toTitleCase(segment);
+
+            const queryIndex = trimmed.indexOf('?');
+            if (queryIndex !== -1) {
+                const queryStr = trimmed.slice(queryIndex + 1);
+                const params = new URLSearchParams(queryStr);
+                const contract = params.get('contract');
+                if (contract) {
+                    category += ' - ' + toTitleCase(contract);
+                }
+            }
+
+            return category;
+        }
+
+        function weightedAverage(entries) {
+            if (entries.length === 0) return null;
+            const totalWeight = entries.reduce((sum, e) => sum + (e.weight || 1), 0);
+            if (totalWeight === 0) return entries[0].value;
+            return entries.reduce((sum, e) => sum + e.value * (e.weight || 1), 0) / totalWeight;
+        }
+
+        // Logical display order: Home first, then the shopping funnel flow.
+        // Any category not listed here falls to the end, sorted by traffic.
+        const CATEGORY_ORDER = [
+            'Home',
+            'Shopping Deal Builder - Choose Device',
+            'Business Deal Builder - Choose Device',
+            'Deal Builder',
+            'Deal Builder Landing',
+            'Deal Builder - New',
+            'Deal Builder - Upgrade',
+            'Deal Builder - Add',
+            'VB Deal Builder',
+            'VB Deal Builder - New',
+            'VB Deal Builder - Upgrade',
+            'VB Deal Builder - Add',
+            'Shopping Upgrade',
+            'Shopping Upgrade Landing',
+            'Upgrade',
+            'Checkout',
+            'VB Checkout'
+        ];
+
+        function categoryRank(name) {
+            const idx = CATEGORY_ORDER.indexOf(name);
+            return idx === -1 ? CATEGORY_ORDER.length : idx;
+        }
+
+        function groupByCategory(items) {
+            const bucketsMap = new Map();
+
+            items.forEach(item => {
+                const url = item.name || item.key || '';
+                const catName = categorizeUrl(url);
+
+                if (catName !== null) {
+                    if (!bucketsMap.has(catName)) {
+                        bucketsMap.set(catName, {
+                            name: catName, lcpValues: [], inpValues: [], clsValues: [],
+                            beaconCount: 0, matchedUrls: [], hasData: false
+                        });
+                    }
+                    const bucket = bucketsMap.get(catName);
+                    const lcp = extractMetricValue(item.metrics, resolvedMetrics.lcp);
+                    const inp = extractMetricValue(item.metrics, resolvedMetrics.inp);
+                    const cls = extractMetricValue(item.metrics, resolvedMetrics.cls);
+                    const count = extractMetricValue(item.metrics, 'beaconCount') || 0;
+
+                    if (lcp !== null && !isNaN(lcp)) bucket.lcpValues.push({ value: lcp, weight: count });
+                    if (inp !== null && !isNaN(inp)) bucket.inpValues.push({ value: inp, weight: count });
+                    if (cls !== null && !isNaN(cls)) bucket.clsValues.push({ value: cls, weight: count });
+                    bucket.beaconCount += count;
+                    bucket.matchedUrls.push(url);
+                    bucket.hasData = true;
+                }
+            });
+
+            return Array.from(bucketsMap.values())
+                .sort((a, b) => {
+                    const rankA = categoryRank(a.name);
+                    const rankB = categoryRank(b.name);
+                    if (rankA !== rankB) return rankA - rankB;
+                    return b.beaconCount - a.beaconCount;
+                })
+                .map(bucket => ({
+                    name: bucket.name,
+                    lcp: weightedAverage(bucket.lcpValues),
+                    inp: weightedAverage(bucket.inpValues),
+                    cls: weightedAverage(bucket.clsValues),
+                    beaconCount: bucket.beaconCount,
+                    matchedUrls: bucket.matchedUrls,
+                    hasData: bucket.hasData
+                }));
+        }
+
+        // ========== RENDER (replaces v3's renderTable with grouped version) ==========
+        function renderTable(data) {
+            const wrapper = document.getElementById('tableWrapper');
+            const items = data.items || [];
+
+            if (items.length === 0) {
+                wrapper.innerHTML = '<div class="empty-state"><i class="fas fa-database"></i><h3>No Data Found</h3><p>No page load data found for the selected website and time range.</p></div>';
+                return;
+            }
+
+            document.getElementById('timestamp').textContent = 'Updated: ' + new Date().toLocaleString() + ' | Time range: ' + document.getElementById('timeRange').selectedOptions[0].text;
+
+            const grouped = groupByCategory(items);
+
+            // Check alerts
+            checkAndSendAlerts(grouped);
+
+            let html = '<table><thead><tr>';
+            html += '<th>Page Type</th>';
+            html += '<th style="text-align:center">LCP Score</th>';
+            html += '<th style="text-align:center">LCP Status</th>';
+            html += '<th style="text-align:center">INP Score</th>';
+            html += '<th style="text-align:center">INP Status</th>';
+            html += '<th style="text-align:center">CLS Score</th>';
+            html += '<th style="text-align:center">CLS Status</th>';
+            html += '<th style="text-align:center">Overall</th>';
+            html += '</tr></thead><tbody>';
+
+            grouped.forEach(row => {
+                const lcpStatus = getStatus('lcp', row.lcp);
+                const inpStatus = getStatus('inp', row.inp);
+                const clsStatus = getStatus('cls', row.cls);
+                const overall = getOverallStatus(lcpStatus, inpStatus, clsStatus);
+
+                const tooltip = row.matchedUrls.length > 0
+                    ? 'Matched: ' + row.matchedUrls.slice(0, 5).join(', ') + (row.matchedUrls.length > 5 ? ' (+' + (row.matchedUrls.length - 5) + ' more)' : '') + ' | Hits: ' + Math.round(row.beaconCount).toLocaleString()
+                    : 'No data matched';
+
+                html += '<tr class="fade-in">';
+                html += '<td class="page-type" title="' + escapeHtml(tooltip) + '">' + escapeHtml(row.name) + '</td>';
+                html += renderScoreCell('lcp', row.lcp);
+                html += renderPassingCell(lcpStatus);
+                html += renderScoreCell('inp', row.inp);
+                html += renderPassingCell(inpStatus);
+                html += renderScoreCell('cls', row.cls);
+                html += renderPassingCell(clsStatus);
+                html += renderOverallCell(overall);
+                html += '</tr>';
+            });
+
+            html += '</tbody></table>';
+            wrapper.innerHTML = html;
+        }
+
+        function renderScoreCell(metric, value) {
+            if (value === null || value === undefined) {
+                return '<td class="score-cell" style="text-align:center">\u2014</td>';
+            }
+            const status = getStatus(metric, value);
+            const formatted = formatScore(metric, value);
+            return '<td class="score-cell score-' + status + '" style="text-align:center">' + formatted + '</td>';
+        }
+
+        function renderPassingCell(status) {
+            if (status === 'no-data') {
+                return '<td class="passing-cell" style="text-align:center">\u2014</td>';
+            }
+            const labels = { good: 'GOOD', 'needs-improvement': 'FAIR', poor: 'POOR' };
+            const barClass = status === 'good' ? 'bar-good' : status === 'needs-improvement' ? 'bar-needs-improvement' : 'bar-poor';
+            return '<td class="passing-cell" style="text-align:center"><div class="passing-bar ' + barClass + '">' + labels[status] + '</div></td>';
+        }
+
+        function renderOverallCell(status) {
+            const labels = { good: 'Passing', 'needs-improvement': 'Needs Work', poor: 'Failing' };
+            const icons = { good: '\u2713', 'needs-improvement': '\u26A0', poor: '\u2717' };
+            const badgeClass = status === 'good' ? 'badge-good' : status === 'needs-improvement' ? 'badge-needs-improvement' : 'badge-poor';
+            return '<td class="overall-status"><span class="status-badge ' + badgeClass + '">' + icons[status] + ' ' + labels[status] + '</span></td>';
+        }
+
+        // ========== POLLING ==========
+        let pollingTimer = null;
+        let pollingActive = false;
+        let nextPollTimestamp = null;
+        let countdownTimer = null;
+
+        function toggleConnectionPanel() {
+            const wrapper = document.getElementById('connectionPanelWrapper');
+            const text = document.getElementById('connToggleText');
+            const icon = document.getElementById('connToggleIcon');
+            if (wrapper.classList.contains('hidden')) {
+                wrapper.classList.remove('hidden');
+                text.textContent = 'Hide Connection';
+                icon.className = 'fas fa-plug';
+            } else {
+                wrapper.classList.add('hidden');
+                text.textContent = 'Show Connection';
+                icon.className = 'fas fa-plug';
+            }
+        }
+
+        function toggleAdvanced() {
+            const panel = document.getElementById('advancedPanel');
+            const text = document.getElementById('advancedToggleText');
+            if (panel.classList.contains('open')) {
+                panel.classList.remove('open');
+                text.textContent = 'Show Advanced Settings';
+            } else {
+                panel.classList.add('open');
+                text.textContent = 'Hide Advanced Settings';
+            }
+        }
+
+        function togglePolling() {
+            pollingActive = !pollingActive;
+            const toggle = document.getElementById('pollingToggle');
+            const status = document.getElementById('pollingStatus');
+            if (pollingActive) {
+                toggle.classList.add('active');
+                status.className = 'polling-indicator active';
+                status.innerHTML = '<span class="pulse"></span> LIVE';
+                startPolling();
+            } else {
+                toggle.classList.remove('active');
+                status.className = 'polling-indicator';
+                status.innerHTML = '<span>OFF</span>';
+                stopPolling();
+            }
+        }
+
+        function startPolling() {
+            stopPolling();
+            const interval = parseInt(document.getElementById('pollingInterval').value);
+            fetchData();
+            nextPollTimestamp = Date.now() + interval;
+            pollingTimer = setInterval(() => {
+                fetchData();
+                nextPollTimestamp = Date.now() + interval;
+            }, interval);
+            updateCountdown();
+        }
+
+        function stopPolling() {
+            if (pollingTimer) { clearInterval(pollingTimer); pollingTimer = null; }
+            if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+            document.getElementById('nextPollTime').textContent = '';
+        }
+
+        function restartPolling() {
+            if (pollingActive) startPolling();
+        }
+
+        function updateCountdown() {
+            if (countdownTimer) clearInterval(countdownTimer);
+            countdownTimer = setInterval(() => {
+                if (!pollingActive || !nextPollTimestamp) {
+                    document.getElementById('nextPollTime').textContent = '';
+                    return;
+                }
+                const secs = Math.max(0, Math.ceil((nextPollTimestamp - Date.now()) / 1000));
+                document.getElementById('nextPollTime').textContent = secs > 60
+                    ? 'Next poll in ' + Math.ceil(secs / 60) + 'm'
+                    : 'Next poll in ' + secs + 's';
+            }, 1000);
+        }
+
+        // ========== ALERTING (in-app only) ==========
+        let alertsActive = false;
+
+        function toggleAlerts() {
+            alertsActive = !alertsActive;
+            const toggle = document.getElementById('alertToggle');
+            if (alertsActive) {
+                toggle.classList.add('active');
+                showToast('Threshold alerts enabled', 'success');
+            } else {
+                toggle.classList.remove('active');
+            }
+        }
+
+        function showToast(message, type) {
+            const toast = document.createElement('div');
+            toast.className = 'notification-toast' + (type === 'success' ? ' success' : '');
+            toast.innerHTML = '<i class="fas fa-' + (type === 'success' ? 'check-circle' : 'exclamation-triangle') + '"></i> ' + message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 5000);
+        }
+
+        function checkAndSendAlerts(grouped) {
+            if (!alertsActive) return;
+            const threshold = document.getElementById('alertThreshold').value;
+            const violations = [];
+
+            grouped.forEach(row => {
+                if (!row.hasData) return;
+                const checks = [
+                    { metric: 'LCP', status: getStatus('lcp', row.lcp), value: row.lcp ? (row.lcp / 1000).toFixed(1) + 's' : 'N/A' },
+                    { metric: 'INP', status: getStatus('inp', row.inp), value: row.inp ? Math.round(row.inp) + 'ms' : 'N/A' },
+                    { metric: 'CLS', status: getStatus('cls', row.cls), value: row.cls ? row.cls.toFixed(2) : 'N/A' }
+                ];
+                checks.forEach(c => {
+                    const isViolation = (threshold === 'poor' && c.status === 'poor') ||
+                        (threshold === 'needs-improvement' && (c.status === 'poor' || c.status === 'needs-improvement'));
+                    if (isViolation) violations.push(row.name + ' - ' + c.metric + ': ' + c.value);
+                });
+            });
+
+            if (violations.length > 0) {
+                addAlertLogEntry(violations.length + ' threshold violation(s) detected');
+                showToast(violations.length + ' metric(s) breached threshold', 'error');
+            }
+        }
+
+        function addAlertLogEntry(message) {
+            const log = document.getElementById('alertLog');
+            log.style.display = 'block';
+            const entry = document.createElement('div');
+            entry.className = 'alert-log-entry';
+            entry.innerHTML = '<span class="alert-time">' + new Date().toLocaleTimeString() + '</span><span class="alert-msg">' + escapeHtml(message) + '</span>';
+            log.insertBefore(entry, log.firstChild);
+            while (log.children.length > 20) log.removeChild(log.lastChild);
+        }
+
+        // ========== DISCOVER URLS ==========
+        async function discoverUrls() {
+            const baseUrl = document.getElementById('instanaUrl').value.trim().replace(/\/$/, '');
+            const token = document.getElementById('apiToken').value.trim();
+            const websiteName = document.getElementById('websiteName').value.trim();
+            const timeRange = parseInt(document.getElementById('timeRange').value);
+
+            if (!baseUrl) { showStatus('Please enter your Instana base URL', 'error'); return; }
+            if (!token) { showStatus('Please enter your API token', 'error'); return; }
+
+            const btn = document.getElementById('discoverBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Discovering...';
+            showStatus('Discovering all pages from Instana...', 'loading');
+
+            try {
+                // Get website ID for filter (same as v3 pattern)
+                let websiteId = null;
+                try {
+                    const websitesRes = await fetch(baseUrl + '/api/website-monitoring/config', {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': 'apiToken ' + token
+                        }
+                    });
+                    if (websitesRes.ok) {
+                        const websites = await websitesRes.json();
+                        if (Array.isArray(websites)) {
+                            const match = websites.find(w =>
+                                w.name && w.name.toLowerCase().includes(websiteName.toLowerCase())
+                            );
+                            if (match) websiteId = match.id;
+                        }
+                    }
+                } catch (e) {
+                    // continue without filter
+                }
+
+                const requestBody = {
+                    type: 'PAGELOAD',
+                    timeFrame: { windowSize: timeRange, to: Date.now() },
+                    group: { groupbyTag: 'beacon.page.name', groupbyTagSecondLevelKey: '' },
+                    metrics: [{ metric: 'beaconCount', aggregation: 'SUM' }],
+                    order: { by: 'beaconCount', direction: 'DESC' },
+                    pagination: { page: 1, pageSize: 200 }
+                };
+
+                if (websiteId) {
+                    requestBody.tagFilterExpression = {
+                        type: 'TAG_FILTER',
+                        name: 'beacon.website.name',
+                        operator: 'EQUALS',
+                        entity: 'NOT_APPLICABLE',
+                        value: websiteName
+                    };
+                }
+
+                const res = await fetch(baseUrl + '/api/website-monitoring/analyze/beacon-groups', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'apiToken ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                if (!res.ok) {
+                    const errText = await res.text();
+                    throw new Error('API Error (' + res.status + '): ' + errText);
+                }
+
+                const data = await res.json();
+                const items = data.items || [];
+
+                const panel = document.getElementById('urlDiscoveryPanel');
+                const content = document.getElementById('urlDiscoveryContent');
+                panel.style.display = 'block';
+
+                let html = '<table style="width:100%;border-collapse:collapse;font-size:12px;">';
+                html += '<thead><tr style="background:var(--instana-blue);color:white;">';
+                html += '<th style="padding:8px;text-align:left;">#</th>';
+                html += '<th style="padding:8px;text-align:left;">Page Name</th>';
+                html += '<th style="padding:8px;text-align:center;">Beacons</th>';
+                html += '<th style="padding:8px;text-align:left;">Category</th>';
+                html += '</tr></thead><tbody>';
+
+                let uncategorizedCount = 0;
+                items.forEach((item, idx) => {
+                    const url = item.name || item.key || '';
+                    const count = extractMetricValue(item.metrics, 'beaconCount') || 0;
+                    const catName = categorizeUrl(url);
+                    const displayName = catName !== null ? catName : '<span style="color:var(--poor);font-weight:600;">\u26A0 UNCATEGORIZED</span>';
+                    if (catName === null) uncategorizedCount++;
+                    const rowBg = catName === null ? 'background:var(--poor-bg);' : (idx % 2 === 0 ? '' : 'background:var(--bg-secondary);');
+
+                    html += '<tr style="border-bottom:1px solid var(--border-color);' + rowBg + '">';
+                    html += '<td style="padding:6px 8px;color:var(--text-muted);">' + (idx + 1) + '</td>';
+                    html += '<td style="padding:6px 8px;font-family:IBM Plex Mono,monospace;font-size:11px;word-break:break-all;">' + escapeHtml(url) + '</td>';
+                    html += '<td style="padding:6px 8px;text-align:center;font-weight:600;">' + Math.round(count).toLocaleString() + '</td>';
+                    html += '<td style="padding:6px 8px;">' + displayName + '</td>';
+                    html += '</tr>';
+                });
+
+                html += '</tbody></table>';
+                html += '<div style="margin-top:12px;padding:10px;background:var(--bg-tertiary);border-radius:6px;font-size:12px;">';
+                html += '<strong>Summary:</strong> ' + items.length + ' URLs, ';
+                html += '<span style="color:var(--good);">' + (items.length - uncategorizedCount) + ' mapped</span>, ';
+                html += '<span style="color:var(--poor);">' + uncategorizedCount + ' uncategorized</span>';
+                html += '</div>';
+
+                content.innerHTML = html;
+                showStatus('Found ' + items.length + ' pages \u2014 ' + uncategorizedCount + ' uncategorized', 'success');
+
+            } catch (err) {
+                showStatus(err.message, 'error');
+                console.log('Discover error: ' + JSON.stringify(err.message));
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-search"></i> Discover All Pages';
+            }
+        }
+
+        async function diagnoseBeaconCount() {
+            const baseUrl = document.getElementById('instanaUrl').value.trim().replace(/\/$/, '');
+            const token = document.getElementById('apiToken').value.trim();
+            const websiteName = document.getElementById('websiteName').value.trim();
+            const timeRange = parseInt(document.getElementById('timeRange').value);
+            const testPageName = document.getElementById('diagnosePageName').value.trim();
+
+            if (!baseUrl) { showStatus('Please enter your Instana base URL', 'error'); return; }
+            if (!token) { showStatus('Please enter your API token', 'error'); return; }
+            if (!testPageName) { showStatus('Please enter a page name to test', 'error'); return; }
+
+            const btn = document.getElementById('diagnoseBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Running...';
+            showStatus('Running beacon count diagnostic for "' + testPageName + '"...', 'loading');
+
+            try {
+                let websiteId = null;
+                try {
+                    const websitesRes = await fetch(baseUrl + '/api/website-monitoring/config', {
+                        method: 'GET',
+                        headers: { 'Authorization': 'apiToken ' + token }
+                    });
+                    if (websitesRes.ok) {
+                        const websites = await websitesRes.json();
+                        if (Array.isArray(websites)) {
+                            const match = websites.find(w =>
+                                w.name && w.name.toLowerCase().includes(websiteName.toLowerCase())
+                            );
+                            if (match) websiteId = match.id;
+                        }
+                    }
+                } catch (e) {
+                    // continue without filter
+                }
+
+                // Filter to the EXACT page name so this isolates one page's true
+                // beaconCount, independent of pagination/top-N ordering elsewhere.
+                const filters = [
+                    { type: 'TAG_FILTER', name: 'beacon.page.name', operator: 'EQUALS', entity: 'NOT_APPLICABLE', value: testPageName }
+                ];
+                if (websiteId) {
+                    filters.push({ type: 'TAG_FILTER', name: 'beacon.website.name', operator: 'EQUALS', entity: 'NOT_APPLICABLE', value: websiteName });
+                }
+
+                const requestBody = {
+                    type: 'PAGELOAD',
+                    timeFrame: { windowSize: timeRange, to: Date.now() },
+                    group: { groupbyTag: 'beacon.page.name', groupbyTagSecondLevelKey: '' },
+                    metrics: [{ metric: 'beaconCount', aggregation: 'SUM' }],
+                    order: { by: 'beaconCount', direction: 'DESC' },
+                    pagination: { page: 1, pageSize: 1 },
+                    tagFilterExpression: filters.length > 1
+                        ? { type: 'EXPRESSION', logicalOperator: 'AND', elements: filters }
+                        : filters[0]
+                };
+
+                console.log('DIAGNOSTIC request body: ' + JSON.stringify(requestBody));
+
+                const res = await fetch(baseUrl + '/api/website-monitoring/analyze/beacon-groups', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'apiToken ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                if (!res.ok) {
+                    const errText = await res.text();
+                    throw new Error('API Error (' + res.status + '): ' + errText);
+                }
+
+                const data = await res.json();
+                console.log('DIAGNOSTIC response for "' + testPageName + '": ' + JSON.stringify(data));
+
+                const item = data.items && data.items[0];
+                const count = item && item.metrics && item.metrics['beaconCount.sum']
+                    ? item.metrics['beaconCount.sum'][0][1]
+                    : null;
+
+                if (count !== null) {
+                    showStatus('Diagnostic: beaconCount (isolated, exact-filtered) for "' + testPageName + '" = ' + Math.round(count).toLocaleString() + '. Compare this to the value in the combined LCP/INP/CLS query, and to Instana\'s Pages tab. Full request/response logged to console.', 'success');
+                } else {
+                    showStatus('Diagnostic ran but found no matching beacons for "' + testPageName + '" in this window \u2014 check console for the raw response.', 'error');
+                }
+            } catch (err) {
+                showStatus('Diagnostic failed: ' + err.message, 'error');
+                console.error(err);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-vial"></i> Run Diagnostic';
+            }
+        }
+    </script>
+
+
+
+</body></html>
